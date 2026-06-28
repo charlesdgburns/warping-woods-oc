@@ -1,0 +1,6 @@
+[application]
+name = "Warping Woods"
+config_version = 5
+
+[rendering]
+renderer = "forward_plus"

@@ -1,0 +1,12 @@
+# Godot exports
+export/
+
+# Godot user data
+.godot/
+
+# Imported assets
+*.import
+
+# OS generated files
+Thumbs.db
+.DS_Store
