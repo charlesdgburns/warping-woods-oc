@@ -26,6 +26,7 @@ No scenes, scripts, or assets exist yet. `images/booklet/` is empty. The `.gitig
 
 - `godot-docs/` — local Godot 4 documentation (git submodule from `godotengine/godot-docs`). Useful for API lookups during implementation.
 - `skills/godot_dev.md` — quick reference for GDScript, nodes, signals, and project architecture patterns.
+- `skills/debug.md` — debugging loop workflow, GUT test setup, error logging format.
 
 ## Conventions
 
