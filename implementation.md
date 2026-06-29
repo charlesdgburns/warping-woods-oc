@@ -95,6 +95,10 @@ Player Input → UI → GameManager → State Update → EventBus → UI Update
 | `action_selected` | action_name | Player clicks an action |
 | `card_hovered` | card_id | Mouse enters a card |
 | `card_clicked` | card_id | Card is clicked |
+| `card_discarded` | card_id, zone | Card discarded (from hand or equipment) |
+| `card_equipped` | card_id, character_id | Card equipped to character |
+| `card_unequipped` | card_id, character_id | Card unequipped from character |
+| `hand_full` | character_id | Character's hand is full (7 cards) |
 | `state_changed` | new_state | GameManager state changes |
 
 ### 3.3 Game States
@@ -150,7 +154,8 @@ CardData is `RefCounted` — lightweight, JSON-loaded at runtime:
 | `gold_value` | int | Gold value if sold |
 | `is_usable` | bool | Can be used from inventory |
 | `effects` | Array[CardEffect] | Array of effect objects |
-| `equip_slot` | String | *(Treasure only)* Equipment slot: `"weapon"`, `"armour"`, `"accessory"`, or `""` (consumable) |
+| `equip_slot` | String | *(Treasure only)* Equipment slot: `"weapon"`, `"armor"`, `"headgear"`, `"footgear"`, `"accessory"`, or `""` (consumable) |
+| `hand_slots_needed` | int | *(Treasure only)* Number of hand slots occupied when equipped: `1` (default) or `2` (two-handed weapons) |
 | `class_restriction` | String | *(Treasure only)* Class required to equip, or `""` (any) |
 | `character_restriction` | int | *(Treasure only)* Specific character ID required, or `0` (any) |
 
@@ -205,7 +210,8 @@ Cards are stored in `resources/cards/<type>/<name>.json`. Each card has an `id`,
 | description | `A sturdy shield that blocks incoming attacks.` |
 | gold_value | `3` |
 | is_usable | `false` |
-| equip_slot | `armour` |
+| equip_slot | `weapon` |
+| hand_slots_needed | `1` |
 | class_restriction | `warrior` |
 | effects | `[{ type: "gain_stat", stat: "defence", value: 2 }]` |
 
@@ -215,11 +221,24 @@ Treasure cards are **uniquely equippable** — only one copy of a given treasure
 
 | Restriction | Description | Example |
 |-------------|-------------|---------|
-| **Equip slot** | Where the item is worn. A character can only have one item per slot. | `"weapon"` — can't dual-wield |
-| **Class restriction** | Only characters of the specified class can equip. | `"armour"` class can wear heavy armour |
+| **Equip slot** | Where the item is worn. A character can only have one item per slot (except `weapon` which has 2 slots and `accessory` which has 2 slots). | `"weapon"` — can equip 2 one-handed or 1 two-handed |
+| **Hand slots** | Two-handed weapons (`hand_slots_needed: 2`) occupy both weapon hand slots. One-handed weapons (`hand_slots_needed: 1`) occupy one. | `"weapon"` with `hand_slots_needed: 2` |
+| **Class restriction** | Only characters of the specified class can equip. | `"armor"` class can wear heavy armour |
 | **Character restriction** | Only a specific character can equip (by ID). | A unique legendary item |
 
 If `equip_slot` is empty (`""`), the treasure is a **consumable** (e.g., health potion) — it is used once and discarded.
+
+**Equipment slot counts per character:**
+
+| Slot | Count | Notes |
+|------|-------|-------|
+| `armor` | 1 | Body armour |
+| `weapon` | 2 hand slots | Two-handed weapons use both; one-handed use one |
+| `headgear` | 1 | Helmets, hoods |
+| `footgear` | 1 | Boots, greaves |
+| `accessory` | 2 | Rings, amulets, cloaks |
+
+**Total: 7 equipment slots per character.**
 
 ### 4.4 Field Reference
 
@@ -237,7 +256,8 @@ If `equip_slot` is empty (`""`), the treasure is a **consumable** (e.g., health 
 | `gold_value` | int | No | Gold value if sold |
 | `is_usable` | bool | No | Can be used from inventory |
 | `effects` | array | Yes | Array of effect objects |
-| `equip_slot` | string | No | Equipment slot (treasure only) |
+| `equip_slot` | string | No | Equipment slot: `"weapon"`, `"armor"`, `"headgear"`, `"footgear"`, `"accessory"`, or `""` (treasure only) |
+| `hand_slots_needed` | int | No | Hand slots occupied when equipped: 1 or 2 (treasure only) |
 | `class_restriction` | string | No | Required class (treasure only) |
 | `character_restriction` | int | No | Required character ID (treasure only) |
 
@@ -282,7 +302,7 @@ All effects extend a base `CardEffect` class. Effects read directly from GameMan
 | **DamageEffect** | `value: int`, `target: String` (`"enemy"`, `"self"`, `"all_allies"`) | Deals damage to target |
 | **HealEffect** | `value: int`, `target: String` (`"self"`, `"ally"`) | Restores HP |
 | **GainGoldEffect** | `value: int` | Adds gold to character |
-| **GainItemEffect** | `item_id: String` | Adds a card to character's inventory |
+| **GainItemEffect** | `item_id: String` | Adds a card to character's hand (or discard if hand full) |
 | **GainStatEffect** | `stat: String`, `value: int` | Temporarily or permanently modifies a stat |
 | **DrawCardEffect** | `deck: String` (`"encounter"`, `"treasure"`), `count: int` | Draws cards from a deck |
 | **OnDefeatEffect** | `then: Array` | Executes child effects when creature is defeated |
@@ -297,6 +317,7 @@ All effects extend a base `CardEffect` class. Effects read directly from GameMan
 
 1. **Accept:** A neutral encounter card with a `grant_quest` effect is drawn
 2. **Register:** QuestEffect registers the quest in GameManager's `active_quests` dictionary
+3. **Hand:** The quest card is added to the character's hand (counts toward 7-card hand limit)
 3. **Condition:** A ConditionalEffect specifies when the quest is complete (e.g., "card_not_in_zone" checks if a specific card has left the encounter deck)
 4. **Check:** On every card movement (via `card_moved` signal), GameManager checks all active quests for completion
 5. **Complete:** When the condition is met, rewards are applied and `quest_completed` is emitted
@@ -340,10 +361,42 @@ Each active quest is stored as a dictionary in `GameManager.active_quests`:
 | `defence` | int | 2 | Defence stat |
 | `speed` | int | 4 | Movement steps per turn |
 | `gold` | int | 0 | Currency |
-| `inventory` | Array[CardData] | `[]` | Collected cards |
+| `hand` | Array[CardData] | `[]` | Cards in hand (max 7). Includes quest cards, unequipped treasures, consumables |
+| `equipment` | EquipmentSlots | new | Equipped items (7 slots total) |
 | `active_quests` | Array[String] | `[]` | Active quest IDs |
 
-### 8.2 Character Methods
+### 8.2 EquipmentSlots
+
+Each character has 7 equipment slots:
+
+```gdscript
+class_name EquipmentSlots
+extends RefCounted
+
+var armor: CardData                    # 1 slot — body armour
+var hands: Array[CardData]             # 2 slots — weapons (one-handed: 1 slot, two-handed: 2 slots)
+var headgear: CardData                 # 1 slot — helmets, hoods
+var footgear: CardData                 # 1 slot — boots, greaves
+var accessories: Array[CardData]       # 2 slots — rings, amulets, cloaks
+```
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `equip(card)` | Equips card to correct slot. Returns `true` on success, `false` if slot full or incompatible |
+| `unequip(card)` | Removes card from equipment (caller must add to hand) |
+| `get_occupied_slots()` | Returns total number of occupied equipment slots |
+| `get_free_weapon_slots()` | Returns number of free hand slots (0, 1, or 2) |
+| `can_equip_weapon(card)` | Returns `true` if enough hand slots are free for this weapon |
+| `is_two_handed(card)` | Returns `true` if `card.hand_slots_needed == 2` |
+
+**Equip logic for weapons:**
+1. Check if weapon is one-handed (`hand_slots_needed: 1`) or two-handed (`hand_slots_needed: 2`)
+2. If one-handed: requires 1 free hand slot
+3. If two-handed: requires 2 free hand slots (player must manually discard/unequip items in hand slots first)
+
+### 8.3 Character Methods
 
 | Method | Description |
 |--------|-------------|
@@ -353,6 +406,8 @@ Each active quest is stored as a dictionary in `GameManager.active_quests`:
 | `add_gold(amount)` | Adds gold |
 | `spend_gold(amount)` | Returns true and deducts if affordable |
 | `rest()` | Regenerates AP *(amount TBD)* |
+| `is_hand_full()` | Returns `true` if hand has 7 cards |
+| `draw_to_hand(card)` | Adds card to hand; if hand full, card goes to discard instead |
 
 *(Character designs — names, classes, abilities, lore — TBD.)*
 
@@ -528,9 +583,9 @@ Every card exists in exactly one zone at a time:
 | `treasure_deck` | Face-down treasure cards |
 | `encounter_discard` | Resolved encounter cards |
 | `treasure_discard` | Resolved treasure cards |
-| `hand_<character_id>` | Character's inventory |
-| `trade` | Mid-trade between characters |
-| `in_play` | Active card (e.g., ongoing hostile encounter) |
+| `hand_<character_id>` | Character's hand (max 7 cards). Quest cards, unequipped treasures, consumables |
+| `equipment_<character_id>` | Character's equipment (7 slots: 1 armor, 2 weapon hand slots, 1 headgear, 1 footgear, 2 accessory) |
+| `in_play_<character_id>` | Active hostile encounter during combat (max 1 per character, max 5 total) |
 
 ### 11.2 ZoneManager Rules
 
@@ -538,7 +593,31 @@ Every card exists in exactly one zone at a time:
 - `move_card(card_id, to_zone)` — moves a card from its current zone to a new zone, emits `card_moved`
 - `get_cards_in_zone(zone)` — returns all card IDs in a zone
 - `get_card_zone(card_id)` — returns which zone a card is in
-- `trade_card(card_id, from_id, to_id)` — atomic transfer between two characters' hands
+- `equip_card(card_id, character_id)` — moves card from hand to equipment slot (validates slot availability and compatibility)
+- `unequip_card(card_id, character_id)` — moves card from equipment to hand (fails if hand full)
+- `can_equip(card_id, character_id)` — checks if slot is available and compatible
+- `draw_to_hand(card_id, character_id)` — adds card to hand; if hand full, card goes to discard
+- `trade_card(card_id, from_id, to_id)` — atomic transfer between two characters. Card can be in hand OR equipped. If equipped on sender, stays equipped on receiver (if slot compatible); otherwise goes to receiver's hand
+
+### 11.3 Hand Overflow
+
+When a character's hand has 7 cards and a new card is drawn:
+- The drawn card goes directly to the appropriate discard pile
+- Emit `card_discarded` signal
+- Character is notified (UI shows "hand full")
+
+### 11.4 Equipment Death Rule
+
+When a character is defeated (HP reaches 0):
+- Items **stay equipped** — they do not drop or move to hand
+- Character is sent to the Summoning Block with all equipment intact
+
+### 11.5 Two-Handed Weapon Rule
+
+When equipping a two-handed weapon (`hand_slots_needed: 2`):
+- Both weapon hand slots must be free
+- Player must **manually discard or unequip** items in hand slots before equipping a two-handed weapon
+- No auto-unequip/auto-discard — player must explicitly manage their hand slots
 
 ---
 
@@ -595,18 +674,19 @@ A character can move to a target tile if:
 │    └───┴───┴───┘      │       └─────────────────┘     │
 │                       │                                 │
 ├───────────────────────┴─────────────────────────────────┤
-│              CURRENT PLAYER — CHARACTER SHEET           │
-│  ┌────────────┬──────────────────────────────────────┐  │
-│  │   STATS    │          INVENTORY (cards)           │  │
-│  │  ┌──────┐  │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │  │
-│  │  │HP 10 │  │  │Item │ │Item │ │Item │ │Item │   │  │
-│  │  │AP  5 │  │  └─────┘ └─────┘ └─────┘ └─────┘   │  │
-│  │  │ATK 3 │  │                                      │  │
-│  │  │DEF 2 │  │         Gold: 12                     │  │
-│  │  │SPD 4 │  │                                      │  │
-│  │  └──────┘  │                                      │  │
-│  └────────────┴──────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+│              CURRENT PLAYER — CHARACTER SHEET                          │
+│  ┌────────────┬──────────────────────────────────────┬───────────┐  │
+│  │   STATS    │          HAND (cards)                │EQUIPMENT  │  │
+│  │  ┌──────┐  │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │┌─────────┐│  │
+│  │  │HP 10 │  │  │Item │ │Item │ │Item │ │Item │   ││ Headgear││  │
+│  │  │AP  5 │  │  └─────┘ └─────┘ └─────┘ └─────┘   ││ Armor   ││  │
+│  │  │ATK 3 │  │  ┌─────┐ ┌─────┐ ┌─────┐           ││ Weapon×2││  │
+│  │  │DEF 2 │  │  │Item │ │Item │ │Item │           ││ Footgear││  │
+│  │  │SPD 4 │  │  └─────┘ └─────┘ └─────┘           ││ Accs ×2 ││  │
+│  │  └──────┘  │                                      │└─────────┘│  │
+│  │            │         Gold: 12                     │           │  │
+│  └────────────┴──────────────────────────────────────┴───────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -645,7 +725,8 @@ Main (Node)
 │   ├── BottomPanel (Control)
 │   │   └── CharacterSheet (HBoxContainer)
 │   │       ├── StatsPanel (VBoxContainer)
-│   │       └── InventoryPanel (HBoxContainer)
+│   │       ├── HandPanel (HBoxContainer)
+│   │       └── EquipmentPanel (VBoxContainer)
 │   │
 │   └── CharacterPopup (PopupPanel)
 │
@@ -775,22 +856,24 @@ Cards use Godot's built-in `_get_drag_data` / `_can_drop_data` / `_drop_data` sy
 ## 19. Character Sheet (Bottom Panel)
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  CURRENT PLAYER — CHARACTER SHEET                   │
-├──────────────┬───────────────────────────────────────┤
-│    STATS     │            INVENTORY                  │
-│  ┌────────┐  │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
-│  │ HP: 10 │  │  │Item │ │Item │ │Item │ │Item │   │
-│  │ AP:  5 │  │  └─────┘ └─────┘ └─────┘ └─────┘   │
-│  │ ATK: 3 │  │                                      │
-│  │ DEF: 2 │  │  Gold: 12                            │
-│  │ SPD: 4 │  │                                      │
-│  └────────┘  │                                      │
-└──────────────┴───────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  CURRENT PLAYER — CHARACTER SHEET                                   │
+├──────────────┬───────────────────────────────────────────────────────┤
+│    STATS     │            HAND (max 7)           │    EQUIPMENT     │
+│  ┌────────┐  │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ │  ┌───────────┐  │
+│  │ HP: 10 │  │  │Card │ │Card │ │Card │ │Card │ │  │ Headgear  │  │
+│  │ AP:  5 │  │  └─────┘ └─────┘ └─────┘ └─────┘ │  │ Armor     │  │
+│  │ ATK: 3 │  │  ┌─────┐ ┌─────┐ ┌─────┐         │  │ Weapon ×2 │  │
+│  │ DEF: 2 │  │  │Card │ │Card │ │Card │         │  │ Footgear  │  │
+│  │ SPD: 4 │  │  └─────┘ └─────┘ └─────┘         │  │ Access ×2 │  │
+│  └────────┘  │                                   │  └───────────┘  │
+│              │  Gold: 12                          │                  │
+└──────────────┴───────────────────────────────────┴──────────────────┘
 ```
 
 - **Stats panel:** VBoxContainer with Label nodes, updated on stat change
-- **Inventory panel:** HBoxContainer of draggable card instances
+- **Hand panel:** HBoxContainer of draggable card instances (max 7)
+- **Equipment panel:** VBoxContainer showing equipped items per slot
 - **Gold display:** Label with icon
 
 ---
@@ -905,9 +988,10 @@ Warping happens at the **end of rounds 6, 12, and 18**.
 *(See §11.2 ZoneManager for implementation.)*
 
 - Characters must be on the same tile
-- Any cards can be traded (encounter cards, treasure cards, items)
+- Any cards can be traded — hand OR equipped
 - No limit to trades per turn
 - Either player's turn
+- **Equipment stays equipped** on receiver if slot is compatible; otherwise card goes to receiver's hand
 
 ---
 

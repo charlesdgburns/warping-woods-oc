@@ -1,6 +1,6 @@
 # Godot Development Skill
 
-> Quick reference for Godot 4.x and GDScript development. For full docs, see `godot-docs/` (local submodule).
+> Quick reference for Godot 4.x and GDScript development. For full docs, see `godot-docs/` (local submodule). For project-specific architecture, see `implementation.md`.
 
 ---
 
@@ -42,7 +42,7 @@
 ### File = Class
 Each `.gd` file is a class. Use `class_name` to register globally:
 ```gdscript
-class_name CardData
+class_name MyClass
 extends RefCounted
 ```
 
@@ -93,35 +93,6 @@ node.queue_free()  # Safe deletion at end of frame
 
 ---
 
-## Project Architecture (Warping Woods)
-
-### Autoloads
-| Name | Role | Stateful? |
-|------|------|-----------|
-| `GameManager` | Round/turn flow, character data, rules | Yes |
-| `EventBus` | Central signal bus | No |
-| `ZoneManager` | Card ownership tracking | Yes |
-| `CardDatabase` | Loads card JSON, provides lookup | Yes |
-
-### Data Flow
-```
-Input → GameManager → State Update → EventBus → UI
-```
-
-### Data Format
-- **Cards:** JSON in `resources/cards/<type>/<name>.json` → loaded into `CardData` (RefCounted)
-- **Blocks:** JSON in `resources/blocks/<name>.json` → loaded into `BlockData` (RefCounted)
-- Card types: `encounter` and `treasure` only
-- Quests = encounter cards with `grant_quest` effects
-
-### Key Patterns
-- **Single ownership:** Each card in one zone at a time, managed by ZoneManager
-- **Atomic state changes:** Validate → Update → Emit signals
-- **No manual positioning:** Use Container nodes for UI layout
-- **Scene instancing:** One Card scene, many instances with different data
-
----
-
 ## Useful Built-in Nodes
 
 | Node | Use Case |
@@ -142,58 +113,6 @@ Input → GameManager → State Update → EventBus → UI
 
 ---
 
-## Common Patterns for This Project
-
-### Loading JSON Data
-```gdscript
-func load_card(path: String) -> Dictionary:
-    var file = FileAccess.open(path, FileAccess.READ)
-    var json = JSON.new()
-    json.parse(file.get_as_text())
-    return json.data
-```
-
-### Signal Pattern (EventBus)
-```gdscript
-# In EventBus.gd
-signal card_moved(card_id: String, from_zone: String, to_zone: String)
-
-# Emitting
-EventBus.card_moved.emit(card_id, "deck", "hand")
-
-# Listening
-EventBus.card_moved.connect(_on_card_moved)
-```
-
-### Custom Resource with JSON
-```gdscript
-class_name CardData
-extends RefCounted
-
-var card_id: String
-var card_name: String
-var card_type: String  # "encounter" or "treasure"
-var effects: Array[Dictionary]
-
-static func from_json(data: Dictionary) -> CardData:
-    var card = CardData.new()
-    card.card_id = data.get("id", "")
-    card.card_name = data.get("name", "")
-    card.card_type = data.get("type", "")
-    card.card_effects = data.get("effects", [])
-    return card
-```
-
-### Container-Based UI Layout
-```gdscript
-# In a scene with VBoxContainer
-# Children auto-stack vertically, no manual positioning
-# Use anchors for responsive layout:
-#   Left: 0, Right: 0.3 → takes left 30% of screen
-```
-
----
-
 ## Editor Tips
 
 - **F5** — Run project
@@ -205,7 +124,7 @@ static func from_json(data: Dictionary) -> CardData:
 
 ---
 
-## Reference Files
+## Reference
 
 - `godot-docs/` — Full Godot 4 documentation (submodule)
 - `implementation.md` — Project architecture and data formats
