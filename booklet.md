@@ -36,12 +36,12 @@
 Five characters are available. Each has a unique lore, playstyle, and class.
 
 | # | Name | Lore | Class | Abilities |
-|---|------|------|-------|-----------|
-| 1 | *(TBD)* | *(TBD)* | *(TBD)* | *(TBD)* |
-| 2 | *(TBD)* | *(TBD)* | *(TBD)* | *(TBD)* |
-| 3 | *(TBD)* | *(TBD)* | *(TBD)* | *(TBD)* |
-| 4 | *(TBD)* | *(TBD)* | *(TBD)* | *(TBD)* |
-| 5 | *(TBD)* | *(TBD)* | *(TBD)* | *(TBD)* |
+|—|—|—|—|—|
+| 1 | **Serra** | The Iron Bastion | Warrior | *(TBD)* |
+| 2 | **Kaelen** | The Shadowstep | Rogue | *(TBD)* |
+| 3 | **Elara** | The Verdant | Druid | *(TBD)* |
+| 4 | **Bran** | The Huntsman | Ranger | *(TBD)* |
+| 5 | **Lyra** | The Luminary | Cleric | *(TBD)* |
 
 ### 3.2 Stats
 

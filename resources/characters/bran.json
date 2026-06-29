@@ -1,0 +1,15 @@
+{
+  "id": 4,
+  "name": "Bran",
+  "class": "ranger",
+  "lore": "A tracker from the northern highlands, Bran has hunted warped beasts since before the warp reached the lowlands. He knows their patterns, their weaknesses, their tells. He carries a longbow carved from a tree that survived the first warp — he calls it 'Unbent'.",
+  "stats": {
+    "max_hp": 10,
+    "max_ap": 4,
+    "attack": 4,
+    "defence": 2,
+    "speed": 4
+  },
+  "gold": 0,
+  "abilities": []
+}

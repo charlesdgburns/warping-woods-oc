@@ -59,7 +59,7 @@ The game uses multiple focused autoloads rather than one "god object":
 
 | Autoload | Responsibility | Has State? |
 |----------|---------------|------------|
-| **GameManager** | Round/turn flow, character data, game rules, warp logic | Yes |
+| **GameManager** | Round/turn flow, character data (loads/saves all 5 characters), game rules, warp logic | Yes |
 | **EventBus** | All cross-system signals | No — pure signal bus |
 | **ZoneManager** | Card ownership tracking (which zone each card is in) | Yes |
 | **CardDatabase** | Loads all card JSON, provides lookup by name | Yes |
@@ -409,7 +409,31 @@ var accessories: Array[CardData]       # 2 slots — rings, amulets, cloaks
 | `is_hand_full()` | Returns `true` if hand has 7 cards |
 | `draw_to_hand(card)` | Adds card to hand; if hand full, card goes to discard instead |
 
-*(Character designs — names, classes, abilities, lore — TBD.)*
+### 8.4 Character Loading
+
+Characters are loaded from JSON files in `resources/characters/<name>.json`. Each file defines the character's base stats, lore, and class. At game startup, a `CharacterLoader` (or GameManager) scans the directory, parses each JSON, and creates `CharacterData` objects with starting HP/AP set to their max values.
+
+**JSON format:**
+
+```json
+{
+  "id": 1,
+  "name": "Serra",
+  "class": "warrior",
+  "lore": "Once captain of the King's Guard...",
+  "stats": {
+    "max_hp": 14,
+    "max_ap": 3,
+    "attack": 4,
+    "defence": 4,
+    "speed": 3
+  },
+  "gold": 0,
+  "abilities": []
+}
+```
+
+The `abilities` array will be populated as character abilities are designed (TBD).
 
 ---
 
@@ -1114,7 +1138,11 @@ warping-woods-oc/
 │   │       ├── health_potion.json
 │   │       └── ...
 │   └── characters/
-│       └── ...
+│       ├── serra.json
+│       ├── kaelen.json
+│       ├── elara.json
+│       ├── bran.json
+│       └── lyra.json
 ├── tools/
 │   └── block_generator.gd
 └── themes/

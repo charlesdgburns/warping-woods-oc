@@ -1,0 +1,15 @@
+{
+  "id": 5,
+  "name": "Lyra",
+  "class": "cleric",
+  "lore": "A priestess of the Luminary Order, Lyra's magic is drawn from a dying star that the warp has not yet corrupted. She travels the warped lands offering aid, mending wounds, and recording the names of those lost to the warp. She believes light can persist — even here.",
+  "stats": {
+    "max_hp": 10,
+    "max_ap": 6,
+    "attack": 2,
+    "defence": 3,
+    "speed": 3
+  },
+  "gold": 0,
+  "abilities": []
+}

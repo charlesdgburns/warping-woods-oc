@@ -1,0 +1,15 @@
+{
+  "id": 1,
+  "name": "Serra",
+  "class": "warrior",
+  "lore": "Once captain of the King's Guard, Serra watched her city swallowed by the warp. She carries a tower shield forged in the old capital — the last of its kind. She speaks little of what she lost, but her resolve is unshakable.",
+  "stats": {
+    "max_hp": 14,
+    "max_ap": 3,
+    "attack": 4,
+    "defence": 4,
+    "speed": 3
+  },
+  "gold": 0,
+  "abilities": []
+}
