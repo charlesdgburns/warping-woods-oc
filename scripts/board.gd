@@ -38,10 +38,10 @@ func _find_ui_elements() -> void:
 	if not ui:
 		return
 	_turn_bar = ui.get_node("TurnBar") as TurnBar
-	_end_turn_btn = ui.get_node("RightPanel/EndTurnBtn") as Button
+	_end_turn_btn = ui.get_node("RightPanel/Content/EndTurnBtn") as Button
 	_char_info = ui.get_node("BottomBar/CharInfo") as Label
 
-	var grid := ui.get_node("RightPanel/ActionGrid")
+	var grid := ui.get_node("RightPanel/Content/ActionGrid")
 	if grid:
 		for btn in grid.get_children():
 			if btn is Button:

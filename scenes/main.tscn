@@ -34,59 +34,63 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = ""
 
-[node name="RightPanel" type="VBoxContainer" parent="UI"]
+[node name="RightPanel" type="PanelContainer" parent="UI"]
+anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -260.0
 offset_right = -20.0
 offset_top = 182.0
 offset_bottom = 518.0
 
-[node name="ActionGrid" type="GridContainer" parent="UI/RightPanel"]
+[node name="Content" type="VBoxContainer" parent="UI/RightPanel"]
+layout_mode = 2
+
+[node name="ActionGrid" type="GridContainer" parent="UI/RightPanel/Content"]
 layout_mode = 2
 size_flags_vertical = 3
 columns = 3
 
-[node name="MoveBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="MoveBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Move"
 
-[node name="AttackBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="AttackBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Attack"
 disabled = true
 
-[node name="EscapeBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="EscapeBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Escape"
 disabled = true
 
-[node name="TradeBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="TradeBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Trade"
 disabled = true
 
-[node name="ItemBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="ItemBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Item"
 disabled = true
 
-[node name="RestBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+[node name="RestBtn" type="Button" parent="UI/RightPanel/Content/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 text = "Rest"
 
-[node name="EndTurnBtn" type="Button" parent="UI/RightPanel"]
+[node name="EndTurnBtn" type="Button" parent="UI/RightPanel/Content"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "End Turn"
