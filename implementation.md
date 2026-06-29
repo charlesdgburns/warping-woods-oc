@@ -21,11 +21,12 @@
 
 ### 2.1 Data vs. Presentation
 
-- **JSON files:** Card definitions live in `resources/cards/<type>/<name>.json`. Fast to edit, easy to batch-edit in a spreadsheet.
-- **`CardDatabase` autoload:** Loads all JSON at startup, creates typed `CardData` objects at runtime.
+- **JSON files:** Card and block definitions live in `resources/cards/<type>/<name>.json` and `resources/blocks/<name>.json`. Fast to edit, easy to batch-edit in a spreadsheet.
+- **`CardDatabase` autoload:** Loads all card JSON at startup, creates typed `CardData` objects at runtime.
+- **`BlockDatabase` (or Board setup):** Loads all block JSON at game start, creates `BlockData` objects.
 - **`Card` scene (Control):** Reusable visual scene that receives a `CardData` object and renders it.
 
-Cards are defined in any text editor without opening Godot, then loaded into typed objects at runtime.
+Cards and blocks are defined in any text editor without opening Godot, then loaded into typed objects at runtime.
 
 ### 2.2 Signal-Driven Design
 
@@ -433,14 +434,80 @@ Individual tile definitions within a block:
 | `local_position` | Vector2i | Position within block (0–2, 0–2) |
 | `has_encounter_token` | bool | Whether an encounter token is placed |
 
-### 10.4 Warping Process
+### 10.4 Block Generation
 
-Warping happens at the end of rounds 6, 12, and 18. The process:
+Blocks are **pre-generated** and stored as JSON files in `resources/blocks/`. The tile layout within each block does not change at runtime — blocks are only moved and rotated during warping.
+
+#### Block Data Format
+
+Each block is a JSON file:
+
+```json
+{
+  "id": "encounter_01",
+  "type": "encounter",
+  "tiles": [
+    { "type": "walkable",  "pos": [0, 0] },
+    { "type": "unwalkable","pos": [1, 0] },
+    { "type": "walkable",  "pos": [2, 0] },
+    { "type": "walkable",  "pos": [0, 1] },
+    { "type": "encounter", "pos": [1, 1] },
+    { "type": "walkable",  "pos": [2, 1] },
+    { "type": "walkable",  "pos": [0, 2] },
+    { "type": "unwalkable","pos": [1, 2] },
+    { "type": "walkable",  "pos": [2, 2] }
+  ]
+}
+```
+
+#### Block Types
+
+| Block Type | Count | Encounter Tiles | Unwalkable | Walkable | Notes |
+|------------|-------|----------------|------------|----------|-------|
+| **Summoning** | 1 | 0 | 0 | 9 | Starting position, hand-designed |
+| **Shop** | 1 | 0 | 0 | 9 | Shop interface, hand-designed |
+| **Warp Wizard** | 1 | 0 | 2 | 7 | Bill's lair, hand-designed |
+| **Encounter** | 13 | 1 | 2 | 6 | Generated from pool |
+
+#### Block Generator (Editor Tool)
+
+A `BlockGenerator` tool runs in the Godot editor to produce encounter block JSONs. It is NOT a runtime tool — it generates a pool of blocks once, which are then saved as JSON files and used as the source of truth.
+
+**Generation rules for encounter blocks:**
+- Exactly 1 encounter tile
+- Exactly 2 unwalkable tiles
+- Exactly 6 walkable tiles
+- Walkable tiles must be connected (no isolated islands)
+- Tile placement is random per block
+
+**Workflow:**
+1. Run the generator in the editor → produces ~20 encounter block JSONs
+2. Playtest and tweak individual blocks if needed
+3. The JSON files in `resources/blocks/` are the permanent pool
+4. At game setup, 13 encounter blocks are randomly selected from the pool
+
+**File structure:**
+```
+resources/blocks/
+├── summoning.json          (hand-designed)
+├── shop.json               (hand-designed)
+├── warp_wizard.json         (hand-designed)
+├── encounter_01.json        (generated)
+├── encounter_02.json        (generated)
+├── ...
+└── encounter_20.json        (generated)
+```
+
+### 10.5 Warping Process
+
+Warping happens at the end of rounds 6, 12, and 18. The block tile layouts do NOT change — blocks are only **moved** to new grid positions and **rotated**.
+
+The process:
 
 1. **Identify** shielded blocks (any block with a character on it)
 2. **Separate** blocks into shielded (stay) and unshielded (move)
-3. **Shuffle** unshielded blocks randomly
-4. **Rebuild** the 4×4 grid: shielded blocks stay in place, unshielded fill remaining slots
+3. **Shuffle** unshielded blocks to new grid positions
+4. **Rebuild** the 4×4 grid: shielded blocks stay, unshielded fill remaining slots
 5. **Rotate** each unshielded block randomly (0°, 90°, 180°, or 270°)
 6. **Restore** encounter tokens on all warped blocks
 7. **Emit** `warp_completed`
@@ -947,6 +1014,13 @@ warping-woods-oc/
 │   ├── tile_data.gd
 │   └── card_database.gd
 ├── resources/
+│   ├── blocks/
+│   │   ├── summoning.json
+│   │   ├── shop.json
+│   │   ├── warp_wizard.json
+│   │   ├── encounter_01.json
+│   │   ├── encounter_02.json
+│   │   └── ...
 │   ├── cards/
 │   │   ├── encounters/
 │   │   │   ├── warped_wolf.json
@@ -957,6 +1031,8 @@ warping-woods-oc/
 │   │       └── ...
 │   └── characters/
 │       └── ...
+├── tools/
+│   └── block_generator.gd
 └── themes/
     └── default_theme.tres
 ```
@@ -967,7 +1043,8 @@ warping-woods-oc/
 
 | Phase | Deliverable | Est. Complexity |
 |-------|------------|----------------|
-| **1** | Board layout: 16 blocks, 144 placeholder tiles, Camera2D pan/zoom | Low |
+| **0** | Block generator tool: generates encounter block pool, saves to `resources/blocks/` | Medium |
+| **1** | Board layout: load 16 pre-generated blocks, 144 tiles, Camera2D pan/zoom | Low |
 | **2** | Character tokens on the board, basic movement (click to move) | Low |
 | **3** | Turn bar with analog clock, turn advancement | Medium |
 | **4** | Card system: CardData, JSON loader, Card scene, render from data | Medium |
@@ -996,19 +1073,27 @@ warping-woods-oc/
 
 ## 29. Data Workflow
 
-### 29.1 Prototyping Phase
+### 29.1 Block Workflow
+
+1. Run `BlockGenerator` in the Godot editor → produces encounter block JSONs
+2. Place in `resources/blocks/`
+3. Playtest and tweak individual blocks as needed
+4. The JSON files are the source of truth for block layouts
+5. At game setup, 13 encounter blocks are randomly selected from the pool
+
+### 29.2 Card Workflow
 
 1. Write card JSON files in any text editor
 2. Place in `resources/cards/<type>/`
 3. Run the game — `CardDatabase` autoloads and loads all JSON
 4. Cards are immediately available as typed `CardData` objects
 
-### 29.2 Iteration
+### 29.3 Iteration
 
 - Edit JSON → restart game (no hot-reload for JSON)
 - Or add a debug key to call `CardDatabase._ready()` to reload
 
-### 29.3 Production
+### 29.4 Production
 
-- Cards are playtested and balanced
+- Blocks and cards are playtested and balanced
 - JSON files are the source of truth
