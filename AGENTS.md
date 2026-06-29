@@ -22,6 +22,10 @@
 
 No scenes, scripts, or assets exist yet. `images/booklet/` is empty. The `.gitignore` covers Godot exports, `.godot/`, and `*.import`.
 
+## Reference
+
+- `godot-docs/` — local Godot 4 documentation (git submodule from `godotengine/godot-docs`). Useful for API lookups during implementation.
+
 ## Conventions
 
 - Game terminology is defined in `booklet.md`, not `implementation.md`
