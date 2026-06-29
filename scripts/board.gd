@@ -9,7 +9,7 @@ var _tile_grid: Dictionary = {}
 var _initialized: bool = false
 
 var _turn_bar: TurnBar
-var _action_card: ActionCard
+var _action_btns: Dictionary = {}
 var _end_turn_btn: Button
 var _char_info: Label
 
@@ -38,14 +38,30 @@ func _find_ui_elements() -> void:
 	if not ui:
 		return
 	_turn_bar = ui.get_node("TurnBar") as TurnBar
-	_action_card = ui.get_node("RightPanel/ActionCard") as ActionCard
 	_end_turn_btn = ui.get_node("RightPanel/EndTurnBtn") as Button
 	_char_info = ui.get_node("BottomBar/CharInfo") as Label
 
+	var grid := ui.get_node("RightPanel/ActionGrid")
+	if grid:
+		for btn in grid.get_children():
+			if btn is Button:
+				_action_btns[btn.name] = btn
+
 
 func _connect_ui() -> void:
-	if _action_card:
-		_action_card.action_selected.connect(_on_action_selected)
+	var action_map := {
+		"MoveBtn": "move",
+		"AttackBtn": "attack",
+		"EscapeBtn": "escape",
+		"TradeBtn": "trade",
+		"ItemBtn": "item",
+		"RestBtn": "rest",
+	}
+	for btn_name in action_map:
+		var btn: Button = _action_btns.get(btn_name)
+		if btn:
+			var action_name: String = action_map[btn_name]
+			btn.pressed.connect(func() -> void: _on_action_selected(action_name))
 	if _end_turn_btn:
 		_end_turn_btn.pressed.connect(_on_end_turn)
 
@@ -54,7 +70,7 @@ func _on_action_selected(action_name: String) -> void:
 	match action_name:
 		"move":
 			_gm.enter_move_mode()
-		"rest_opt":
+		"rest":
 			_gm.handle_rest()
 
 
@@ -198,8 +214,8 @@ func _on_turn_started(char_id: String) -> void:
 			char_data.character_name, char_data.hp, char_data.max_hp,
 			char_data.ap, char_data.max_ap, char_data.speed
 		]
-	if _action_card:
-		_action_card.reset_turn()
+	_set_btn_available("MoveBtn", true)
+	_set_btn_available("RestBtn", true)
 
 
 func _on_round_started(round_num: int) -> void:
@@ -226,8 +242,14 @@ func _on_character_moved(char_id: String, from_pos: Vector2i, to_pos: Vector2i) 
 	_on_move_mode_exited()
 
 	var char_data: CharacterData = _gm.get_current_character()
-	if char_data and _action_card:
-		_action_card.set_option_available("move", not char_data.has_moved)
+	if char_data:
+		_set_btn_available("MoveBtn", not char_data.has_moved)
+
+func _set_btn_available(btn_name: String, available: bool) -> void:
+	var btn: Button = _action_btns.get(btn_name)
+	if btn:
+		btn.disabled = not available
+		btn.modulate = Color.WHITE if available else Color(0.5, 0.5, 0.5, 0.7)
 
 
 func _on_warp_completed() -> void:

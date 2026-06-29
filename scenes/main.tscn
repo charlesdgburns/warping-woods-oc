@@ -1,7 +1,6 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/board.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/action_card.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/turn_bar.gd" id="3"]
 
 [node name="Main" type="Node"]
@@ -42,11 +41,50 @@ offset_right = -20.0
 offset_top = 182.0
 offset_bottom = 518.0
 
-[node name="ActionCard" type="GridContainer" parent="UI/RightPanel"]
+[node name="ActionGrid" type="GridContainer" parent="UI/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+columns = 3
+
+[node name="MoveBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 2
-script = ExtResource("2")
+size_flags_vertical = 3
+text = "Move"
+
+[node name="AttackBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Attack"
+disabled = true
+
+[node name="EscapeBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Escape"
+disabled = true
+
+[node name="TradeBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Trade"
+disabled = true
+
+[node name="ItemBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Item"
+disabled = true
+
+[node name="RestBtn" type="Button" parent="UI/RightPanel/ActionGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "Rest"
 
 [node name="EndTurnBtn" type="Button" parent="UI/RightPanel"]
 layout_mode = 2
