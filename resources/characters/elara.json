@@ -1,15 +1,13 @@
 {
-  "id": 3,
+  "id": "elara",
   "name": "Elara",
   "class": "druid",
   "lore": "Elara was a keeper of the Deepwood Grove, a forest untouched by the warp — until it wasn't. She watched ancient trees twist into monstrous shapes and fled with only her staff and a handful of enchanted seeds. She believes the warp is a wound, and that even wounds can heal.",
-  "stats": {
-    "max_hp": 8,
-    "max_ap": 7,
-    "attack": 2,
-    "defence": 2,
-    "speed": 4
-  },
+  "max_hp": 8,
+  "max_ap": 7,
+  "attack": 2,
+  "defence": 2,
+  "speed": 4,
   "gold": 0,
   "abilities": []
 }

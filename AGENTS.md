@@ -20,7 +20,13 @@
 
 ## Current State
 
-No scenes, scripts, or assets exist yet. `images/booklet/` is empty. The `.gitignore` covers Godot exports, `.godot/`, and `*.import`.
+Step 1 (Block Generator) complete. 23 block JSONs in `resources/blocks/`: 3 hand-designed + 20 generated encounter blocks. Scripts exist for TileData, BlockData, BlockGenerator (@tool), standalone generator, and validation.
+
+Step 2 (Board + Characters + Turns + Warping) complete. Main scene (main.tscn) with board, turn bar, action card (Move/Rest + End Turn), 5 character tokens. Click-to-move with highlighted valid tiles. Turn/round management with End Turn. Block warping at rounds 6/12/18. No Camera2D — board is static and centered.
+
+Data classes: CharacterData, BoardState (with tile_type_grid for walkability lookups).
+Scene scripts: GameBoard, BoardBlock, BoardTile, CharacterToken, ActionCard, ActionOption, TurnBar.
+Autoload: GameManager (character loading, turn flow, move validation, warp execution).
 
 ## Reference
 

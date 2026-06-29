@@ -9,12 +9,13 @@
 The core workflow when fixing bugs or developing features:
 
 ```
+0. CAPTURE → Run .\tools\capture_errors.ps1 to snapshot Godot parse errors
 1. RUN     → Execute the game or relevant tests
 2. CATCH   → Error occurs → log to /debug/<feature>_<date>.log
 3. ANALYSE → Read the error, identify root cause
 4. TEST    → Write a GUT test that reproduces the bug (in /tests/)
 5. FIX     → Modify the source code
-6. VERIFY  → Run tests until green
+6. VERIFY  → Run .\tools\capture_errors.ps1 again, then tests until green
 7. REPEAT  → If new error surfaces, go to step 2
 8. COMMIT  → All tests pass, commit the fix + test
 ```
@@ -43,6 +44,39 @@ The core workflow when fixing bugs or developing features:
 ```
 
 Each test file extends `GutTest` and is prefixed with `test_`.
+
+---
+
+## Error Capture Script
+
+**Script:** `tools/capture_errors.ps1`
+
+Automatically runs Godot in headless mode and captures parse/script errors before manual play-testing.
+
+### Usage
+
+```powershell
+# From project root (defaults auto-detect Godot binary + project dir)
+.\tools\capture_errors.ps1
+
+# Explicit paths
+.\tools\capture_errors.ps1 -GodotBin "C:\Users\owner\Coding\godot\Godot_v4.7-stable_win64_console.exe" -ProjectDir "C:\Users\owner\Coding\warping-woods-oc"
+```
+
+### Behavior
+
+1. Locates Godot binary (checks known paths, then `PATH`)
+2. Finds project root (looks for `project.godot`)
+3. Runs `godot --path <project> --headless --quit`, capturing all output
+4. Writes full output to `debug/parse_errors_<yyyy-MM-dd_HH-mm-ss>.log`
+5. Scans output for error keywords (`Parser Error`, `Parse Error`, `ERROR`, `SCRIPT ERROR`)
+6. Exits with code `0` if clean, `1` if errors found
+
+### When to use
+
+- **First diagnostic step** when Godot refuses to open the project
+- **After any script edit** to catch parse errors before the editor loads
+- **Before committing** to ensure no syntax/type errors slipped in
 
 ---
 

@@ -1,15 +1,13 @@
 {
-  "id": 2,
+  "id": "kaelen",
   "name": "Kaelen",
   "class": "rogue",
   "lore": "A street rat from the warped underbelly of the capital, Kaelen survived where others fell. She knows every shadow, every loose stone, every blind spot. The warp twisted the city, but Kaelen was already twisted — she fits right in.",
-  "stats": {
-    "max_hp": 8,
-    "max_ap": 4,
-    "attack": 5,
-    "defence": 1,
-    "speed": 5
-  },
+  "max_hp": 8,
+  "max_ap": 4,
+  "attack": 5,
+  "defence": 1,
+  "speed": 5,
   "gold": 0,
   "abilities": []
 }

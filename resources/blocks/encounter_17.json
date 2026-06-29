@@ -1,0 +1,78 @@
+﻿{
+    "id":  "encounter_17",
+    "type":  "encounter",
+    "tiles":  [
+                  {
+                      "pos":  [
+                                  0,
+                                  0
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  0,
+                                  1
+                              ],
+                      "has_encounter_token":  true,
+                      "type":  "encounter"
+                  },
+                  {
+                      "pos":  [
+                                  0,
+                                  2
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  1,
+                                  0
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  1,
+                                  1
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  1,
+                                  2
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "unwalkable"
+                  },
+                  {
+                      "pos":  [
+                                  2,
+                                  0
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  2,
+                                  1
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "walkable"
+                  },
+                  {
+                      "pos":  [
+                                  2,
+                                  2
+                              ],
+                      "has_encounter_token":  false,
+                      "type":  "unwalkable"
+                  }
+              ]
+}

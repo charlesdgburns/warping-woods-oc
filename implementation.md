@@ -687,7 +687,7 @@ A character can move to a target tile if:
 │                       │   │ Encounter │ Treasure  │     │
 │      GAME BOARD       │   │   deck    │   deck    │     │
 │   (Node2D + Camera    │   └───────────┴───────────┘     │
-│    for pan/zoom)      │                                 │
+│    static, centered)  │                                 │
 │                       │       ┌─────────────────┐       │
 │    ┌───┬───┬───┐      │       │   ACTION CARD    │      │
 │    │   │   │   │      │       │ ┌─────┬─────┬─────┐│   │
@@ -720,7 +720,6 @@ A character can move to a target tile if:
 ```
 Main (Node)
 ├── Board (Node2D)
-│   ├── Camera2D
 │   ├── Blocks (Node2D)
 │   │   ├── Block_0_0 (Node2D)   — 3×3 tiles
 │   │   ├── Block_0_1 (Node2D)
@@ -760,11 +759,11 @@ Main (Node)
 
 ---
 
-## 15. Board & Camera
+## 15. Board & Layout
 
 ### 15.1 Board
 
-The Board is a `Node2D` containing all tiles and character tokens. A `Camera2D` child provides pan and zoom.
+The Board is a `Node2D` containing all tiles and character tokens. The board is centered in the window with padding for the turn bar (top) and character stats strip (bottom). No camera pan/zoom — the full board fits within the window.
 
 ### 15.2 Placeholder Tiles
 
@@ -1046,7 +1045,7 @@ The Shop Block offers items for purchase using gold.
 |---------|-----------|-------|
 | Game root | `Node` | Main scene |
 | Board | `Node2D` | Contains tiles and tokens |
-| Camera | `Camera2D` | Pan/zoom |
+| (removed — board is static, no camera) | | |
 | Tiles | `ColorRect` | Placeholder rectangles |
 | Blocks | `Node2D` | 3×3 tile groups |
 | Character tokens | `Node2D` | Coloured circles/pawns |
@@ -1059,11 +1058,14 @@ The Shop Block offers items for purchase using gold.
 | Action card | `GridContainer` | 2×3 grid of action options |
 | Action option | `PanelContainer` | Icon + label, modulate for state |
 | Bottom panel | `Control` | Character sheet |
-| Character sheet | `HBoxContainer` | Stats left, inventory right |
+| Character sheet | `HBoxContainer` | Stats left, hand middle, equipment right |
 | Card scene | `PanelContainer` | Reusable card with CardData |
 | Card popup | `Popup` | Enlarged card focus view |
 | Character popup | `PopupPanel` | Read-only character sheet |
 | Game manager | `Node` (autoload) | Game logic and state |
+| Event bus | `Node` (autoload) | Cross-system signal bus |
+| Zone manager | `Node` (autoload) | Card zone tracking |
+| Card database | `Node` (autoload) | JSON card loader |
 
 ---
 
@@ -1143,49 +1145,64 @@ warping-woods-oc/
 │       ├── elara.json
 │       ├── bran.json
 │       └── lyra.json
+├── tests/
+│   ├── .gutconfig.json
+│   ├── unit/
+│   └── integration/
 ├── tools/
 │   └── block_generator.gd
+├── debug/
 └── themes/
     └── default_theme.tres
 ```
 
 ---
 
-## 28. Implementation Phases
+## 28. Implementation Plan
 
-| Phase | Deliverable | Est. Complexity |
-|-------|------------|----------------|
-| **0** | Block generator tool: generates encounter block pool, saves to `resources/blocks/` | Medium |
-| **1** | Board layout: load 16 pre-generated blocks, 144 tiles, Camera2D pan/zoom | Low |
-| **2** | Character tokens on the board, basic movement (click to move) | Low |
-| **3** | Turn bar with analog clock, turn advancement | Medium |
-| **4** | Card system: CardData, JSON loader, Card scene, render from data | Medium |
-| **5** | Card interaction: hover zoom, click focus popup | Medium |
-| **6** | Card drag-and-drop between zones | Medium |
-| **7** | Action card with valid action highlighting | Medium |
-| **8** | Character sheet (bottom panel), stats display, inventory | Medium |
-| **9** | Deck management: shuffle, draw, discard, reshuffle | Low |
-| **10** | ZoneManager: single card ownership, card movement tracking | Medium |
-| **11** | EventBus: cross-system signal bus | Low |
-| **12** | GameManager: autoload, round/turn flow, game state machine | High |
-| **13** | BoardState: block grid, tile positions, character positions | Medium |
-| **14** | CharacterData: stats, HP, gold, inventory | Medium |
-| **15** | Encounter system: land on tile, draw card, resolve, remove token | High |
-| **16** | CardEffect system: damage, heal, gain_gold, gain_item, draw_card | Medium |
-| **17** | Quest system: grant_quest, ConditionalEffect, auto-completion | High |
-| **18** | Combat: turn-based, dice rolls, multi-character | High |
-| **19** | Trading between characters | Low |
-| **20** | Shop, gold, items | Medium |
-| **21** | Warping: block shuffle, rotate, token reset | High |
-| **22** | Revival at Summoning Block | Low |
-| **23** | Bill encounter & win/lose conditions | High |
-| **24** | Polish: animations, sound, visual feedback | Medium |
+The implementation follows 7 sequential steps. Each step produces a testable milestone before moving to the next.
+
+| Step | Deliverable | Depends On | Est. |
+|------|-------------|------------|------|
+| **1** | **Block Generator Tool** — `TileData`/`BlockData` classes, `@tool` editor script that generates encounter block pool JSONs | Nothing | Medium |
+| **2** | **Board + Characters + Turns + Warping** — `main.tscn`, board/block/tile/character_token scenes, action card (Move/Rest + End Turn), turn bar, round/turn flow, BoardState, CharacterData, click-to-move (snap, Manhattan distance ≤ speed), block warp at rounds 6/12/18 | Step 1 (block JSONs) | High |
+| **3** | **Encounter System** — `CardData`, `CardEffect` types, `EventBus`, `CardDatabase`, `ZoneManager`, card scene, draw-on-encounter-tile, effect resolution (neutral + hostile) | Step 2 (movement reaches encounter tiles) | High |
+| **4** | **Combat** — hostile encounters with dice combat, creature turns, multi-character joining, escape, character defeat/revival | Step 3 (hostile encounter cards) | High |
+| **5** | **Treasure System** — treasure deck, loot on creature defeat, `Card` scene renders treasure data, consumable items | Step 4 (combat produces loot) | Medium |
+| **6** | **Hand & Equipment** — 7-slot hand UI, 7-slot equipment UI, equip/unequip from hand to slots, drag-and-drop between zones | Step 5 (treasure cards to equip) | Medium |
+| **7** | **Gold & Shop** — gold tracking per character, Shop Block UI, buy/sell items from shop stock | Step 6 (spend gold on items) | Medium |
+
+### Post-Plan Features
+
+After the core loop (Steps 1-7) is playable, add these features in any order:
+
+| Feature | Depends On | Est. |
+|---------|------------|------|
+| Warping (block shuffle, rotation, token reset, shielding) | Step 2 | High |
+| Turn bar with analog clock (24-round display, character icons) | Step 2 | Medium |
+| Action card (valid action highlighting for Move/Attack/Escape/Trade/Item/Rest) | Step 4 | Medium |
+| Quest system (grant_quest effect, conditional completion, rewards) | Step 3 | High |
+| Trading between characters (drag cards between hands/equipment) | Step 6 | Low |
+| Character popup (read-only sheet for non-active characters) | Step 2 | Low |
+| Bill the Warping Wizard encounter & win/lose conditions | Step 4 | High |
+| Revival at Summoning Block | Step 2 | Low |
+| Polish (animations, sound, visual feedback) | All | Medium |
+
+### Dependencies Map
+
+```
+Step 1         Step 2         Step 3         Step 4         Step 5         Step 6         Step 7
+Generator ──► Board + Char ──► Encounters ──► Combat ─────► Treasures ──► Hand/Equip ──► Gold/Shop
+                              │               │                                       │
+                              ▼               ▼                                       ▼
+                          Quests          Bill + Revival                          Trading
+```
 
 ---
 
 ## 29. Data Workflow
 
-### 29.1 Block Workflow
+### 29.1 Block Workflow (Step 1)
 
 1. Run `BlockGenerator` in the Godot editor → produces encounter block JSONs
 2. Place in `resources/blocks/`
@@ -1193,14 +1210,21 @@ warping-woods-oc/
 4. The JSON files are the source of truth for block layouts
 5. At game setup, 13 encounter blocks are randomly selected from the pool
 
-### 29.2 Card Workflow
+### 29.2 Card Workflow (Steps 3-5)
 
 1. Write card JSON files in any text editor
 2. Place in `resources/cards/<type>/`
 3. Run the game — `CardDatabase` autoloads and loads all JSON
 4. Cards are immediately available as typed `CardData` objects
 
-### 29.3 Iteration
+### 29.3 Character Workflow (Step 2)
+
+1. Write character JSON files in any text editor
+2. Place in `resources/characters/`
+3. GameManager loads all character JSONs at startup
+4. 5 `CharacterData` objects are created with starting stats, hand, and equipment
+
+### 29.4 Iteration
 
 - Edit JSON → restart game (no hot-reload for JSON)
 - Or add a debug key to call `CardDatabase._ready()` to reload
