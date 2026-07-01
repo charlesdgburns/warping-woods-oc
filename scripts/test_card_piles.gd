@@ -72,6 +72,7 @@ func _on_draw_pressed() -> void:
 	_draw_button.disabled = true
 
 	var card := _deck_cards.pop_back() as CardVisual
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	_shift_deck_visual()
 
 	_update_status("Drawing: %s" % card_data.name)

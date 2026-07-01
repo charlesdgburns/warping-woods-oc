@@ -10,15 +10,29 @@ config_version=5
 
 [application]
 
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/test_menu.tscn"
 config/features=PackedStringArray("4.7")
 name="Warping Woods"
 config_version=5
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
 
 [autoload]
 
 GameManager="*res://scripts/game_manager.gd"
 ScreenshotCapture="*res://debug/screenshot_capture.gd"
+EventBus="*res://scripts/event_bus.gd"
+CardDatabase="*res://scripts/card_database.gd"
+ZoneManager="*res://scripts/zone_manager.gd"
+
+[plugins]
+
+gut/disabled=false
 
 [rendering]
 
