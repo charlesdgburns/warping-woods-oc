@@ -6,11 +6,10 @@ signal tile_clicked(grid_position: Vector2i)
 var grid_position: Vector2i
 var tile_type: String = "walkable"
 var walkable: bool = true
+var _tile_size: int = 28
 
 var _sprite: Sprite2D
 var _highlight: Sprite2D
-
-const TILE_SIZE := 40
 
 
 func _ready() -> void:
@@ -34,21 +33,22 @@ func _generate_nodes() -> void:
 
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
-	rect.size = Vector2(TILE_SIZE, TILE_SIZE)
+	rect.size = Vector2(_tile_size - 2, _tile_size - 2)
 	shape.shape = rect
 	add_child(shape)
 
-	var img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	var img := Image.create(_tile_size, _tile_size, false, Image.FORMAT_RGBA8)
 	img.fill(Color.WHITE)
 	var tex := ImageTexture.create_from_image(img)
 	_sprite.texture = tex
 	_highlight.texture = tex
 
-
-func setup(pos: Vector2i, type: String) -> void:
+func setup(pos: Vector2i, type: String, size: int = 28) -> void:
 	grid_position = pos
 	tile_type = type
+	_tile_size = size
 	walkable = (type != "unwalkable")
+	_generate_nodes()
 	_set_color()
 
 

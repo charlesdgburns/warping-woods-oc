@@ -4,10 +4,9 @@ extends "res://godot_ui_components/scenes/balatro/scripts/card.gd"
 var _card_data: CardData
 var home_position: Vector2 = Vector2.ZERO
 
-var _render_pending := false
-var _animation_pending := false
-var _render_viewport: SubViewport
 var _visuals_ready := false
+var _is_hovered := false
+var _resting_z_index: int = 0
 
 signal card_released(card: CardVisual)
 
@@ -42,18 +41,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	if _render_pending and _render_viewport and is_instance_valid(_render_viewport):
-		var tex := _render_viewport.get_texture()
-		if tex and tex.get_size() != Vector2.ZERO:
-			var image := tex.get_image()
-			_render_viewport.queue_free()
-			_render_viewport = null
-			_render_pending = false
-			if image:
-				card_texture.texture = ImageTexture.create_from_image(image)
-			if _animation_pending:
-				_animation_pending = false
-				_start_draw_animation()
 
 func _setup_visuals() -> void:
 	var empty_style := StyleBoxEmpty.new()
@@ -64,7 +51,7 @@ func _setup_visuals() -> void:
 	add_theme_stylebox_override("focus", empty_style)
 
 	var fake_shader := load("res://godot_ui_components/scenes/shared/shaders/fake_3D.gdshader") as Shader
-	var texture := load("res://resources/textures/card/Tiles_A_white.png") as Texture2D
+	var texture := load("res://resources/cards/textures/card_back_encounter.png") as Texture2D
 
 	var shadow_rect := TextureRect.new()
 	shadow_rect.name = "Shadow"
@@ -124,16 +111,33 @@ func setup(card: CardData) -> void:
 func _render_face() -> void:
 	if not _card_data or not is_inside_tree():
 		return
-	_render_pending = true
-	_render_viewport = SubViewport.new()
-	_render_viewport.size = Vector2(152, 207)
-	_render_viewport.transparent_bg = true
-	_render_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var card_face := Control.new()
-	card_face.size = Vector2(152, 207)
-	_render_viewport.add_child(card_face)
-	CardRender._build_card_face(card_face, _card_data, Vector2(152, 207))
-	add_child(_render_viewport)
+	var tex_path: String = _card_data.texture
+	if tex_path.is_empty() or not ResourceLoader.exists(tex_path):
+		push_error("CardVisual: Missing texture for card '%s' at '%s'" % [_card_data.id, tex_path])
+		return
+	card_texture.texture = ResourceLoader.load(tex_path) as Texture2D
+
+func set_back_texture(card_type: int) -> void:
+	var path := "res://resources/cards/textures/card_back_encounter.png"
+	if card_type == CardData.Type.TREASURE:
+		path = "res://resources/cards/textures/card_back_treasure.png"
+	card_texture.texture = ResourceLoader.load(path) as Texture2D
+
+func flip_face(data: CardData) -> void:
+	var old_filter := mouse_filter
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var tw := create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(self, "scale:x", 0.0, 0.1)
+	await tw.finished
+
+	setup(data)
+
+	var tw2 := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	tw2.tween_property(self, "scale:x", 1.0, 0.1)
+	await tw2.finished
+
+	mouse_filter = old_filter
 
 func get_card_data() -> CardData:
 	return _card_data
@@ -144,14 +148,30 @@ func get_card_rect() -> Rect2:
 func _on_card_button_up() -> void:
 	scale = Vector2.ONE
 	rotation = 0.0
-	if home_position != Vector2.ZERO:
+	if home_position != Vector2.ZERO and global_position.distance_squared_to(home_position) > 4.0:
 		snap_to_home()
 	card_released.emit(self)
+
+func set_resting_z_index(value: int) -> void:
+	_resting_z_index = value
+	if not _is_hovered:
+		z_index = value
+
+func _on_mouse_entered() -> void:
+	_is_hovered = true
+	z_index = 100
+	super._on_mouse_entered()
+
+func _on_mouse_exited() -> void:
+	_is_hovered = false
+	z_index = _resting_z_index
+	super._on_mouse_exited()
 
 func handle_shadow(delta: float) -> void:
 	var center: Vector2 = get_viewport_rect().size / 2.0
 	var distance: float = global_position.x - center.x
-	shadow.position.x = lerp(0.0, sign(distance) * max_offset_shadow, abs(distance / center.x))
+	var intensity: float = 1.0 if (_is_hovered or following_mouse) else 0.15
+	shadow.position.x = lerp(0.0, sign(distance) * max_offset_shadow, abs(distance / center.x) * intensity)
 
 func snap_to_home() -> void:
 	var tween = create_tween().set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
@@ -166,9 +186,6 @@ func set_home_animated(pos: Vector2) -> void:
 	snap_to_home()
 
 func play_draw_animation() -> void:
-	if _render_pending:
-		_animation_pending = true
-		return
 	_start_draw_animation()
 
 func _start_draw_animation() -> void:

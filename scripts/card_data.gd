@@ -11,6 +11,7 @@ var sub_type: SubType
 var effects: Array = []
 var description: String
 var condition: String
+var texture: String
 
 static func from_dict(data: Dictionary) -> CardData:
 	var card := CardData.new()
@@ -33,5 +34,6 @@ static func from_dict(data: Dictionary) -> CardData:
 	card.effects = data.get("effects", [])
 	card.description = data.get("description", "")
 	card.condition = data.get("condition", "")
+	card.texture = data.get("texture", "")
 	
 	return card

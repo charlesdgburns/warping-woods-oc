@@ -1,10 +1,14 @@
 {
+  "description": "A creature of shadow and fur leaps from the brush!",
+  "effects": [
+    {
+      "enemy_id": "wolf_stats_01",
+      "type": "trigger_combat"
+    }
+  ],
   "id": "wolf_01",
   "name": "Warped Wolf",
-  "type": "encounter",
   "sub_type": "hostile",
-  "effects": [
-    {"type": "trigger_combat", "enemy_id": "wolf_stats_01"}
-  ],
-  "description": "A creature of shadow and fur leaps from the brush!"
+  "texture": "res://resources/cards/textures/wolf_01.png",
+  "type": "encounter"
 }

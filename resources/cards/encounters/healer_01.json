@@ -1,11 +1,18 @@
 {
+  "description": "A gentle spirit offers a soothing touch to your wounds.",
+  "effects": [
+    {
+      "type": "heal",
+      "value": 5.0
+    },
+    {
+      "type": "gain_gold",
+      "value": 2.0
+    }
+  ],
   "id": "healer_01",
   "name": "Forest Healer",
-  "type": "encounter",
   "sub_type": "neutral",
-  "effects": [
-    {"type": "heal", "value": 5},
-    {"type": "gain_gold", "value": 2}
-  ],
-  "description": "A gentle spirit offers a soothing touch to your wounds."
+  "texture": "res://resources/cards/textures/healer_01.png",
+  "type": "encounter"
 }

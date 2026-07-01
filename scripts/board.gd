@@ -11,6 +11,7 @@ var _initialized: bool = false
 var _turn_bar: TurnBar
 var _action_btns: Dictionary = {}
 var _end_turn_btn: Button
+var _revive_btn: Button
 var _char_info: Label
 
 const TILE_SIZE := 28
@@ -39,6 +40,7 @@ func _find_ui_elements() -> void:
 		return
 	_turn_bar = ui.get_node("TurnBar") as TurnBar
 	_end_turn_btn = ui.get_node("RightPanel/Content/EndTurnBtn") as Button
+	_revive_btn = ui.get_node("RightPanel/Content/ReviveBtn") as Button
 	_char_info = ui.get_node("BottomBar/CharInfo") as Label
 
 	var grid := ui.get_node("RightPanel/Content/ActionGrid")
@@ -64,9 +66,12 @@ func _connect_ui() -> void:
 			btn.pressed.connect(func() -> void: _on_action_selected(action_name))
 	if _end_turn_btn:
 		_end_turn_btn.pressed.connect(_on_end_turn)
+	if _revive_btn:
+		_revive_btn.pressed.connect(_on_revive_selected)
 
 
 func _on_action_selected(action_name: String) -> void:
+	get_node("/root/EventBus").log_event("Action selected: %s" % action_name)
 	match action_name:
 		"move":
 			_gm.enter_move_mode()
@@ -76,6 +81,32 @@ func _on_action_selected(action_name: String) -> void:
 
 func _on_end_turn() -> void:
 	_gm.end_turn()
+
+func _on_revive_selected() -> void:
+	var active_char: CharacterData = _gm.get_current_character()
+	if not active_char: return
+	
+	# Check if active char is on summoning block
+	var summoning_pos := Vector2i(0, 0)
+	for bx in 4:
+		for by in 4:
+			if _gm.board_state.block_grid[bx][by] == "summoning":
+				summoning_pos = Vector2i(bx * 3, by * 3)
+				break
+	
+	if active_char.grid_position != summoning_pos:
+		return
+		
+	# Find first defeated character to revive
+	var target_id: String = ""
+	for c in _gm.characters:
+		if c.hp <= 0:
+			target_id = c.id
+			break
+			
+	if target_id != "":
+		_gm.handle_revival(target_id)
+		_gm.end_turn()
 
 
 func _build_board() -> void:
@@ -163,6 +194,7 @@ func _create_blocks() -> void:
 				var global_pos := Vector2i(bx * TILES_PER_BLOCK + tile_pos_in_block.x,
 										  by * TILES_PER_BLOCK + tile_pos_in_block.y)
 				tile.grid_position = global_pos
+				tile.setup(global_pos, tile.tile_type, TILE_SIZE)
 				_tile_grid[global_pos] = tile
 				_gm.board_state.tile_type_grid[global_pos.x][global_pos.y] = tile.tile_type
 
@@ -216,6 +248,25 @@ func _on_turn_started(char_id: String) -> void:
 		]
 	_set_btn_available("MoveBtn", true)
 	_set_btn_available("RestBtn", true)
+	
+	# Revive button logic
+	var can_revive := false
+	var summoning_pos := Vector2i(0, 0)
+	for bx in 4:
+		for by in 4:
+			if _gm.board_state.block_grid[bx][by] == "summoning":
+				summoning_pos = Vector2i(bx * 3, by * 3)
+				break
+	
+	if char_data.grid_position == summoning_pos:
+		for c in _gm.characters:
+			if c.hp <= 0:
+				can_revive = true
+				break
+	
+	if _revive_btn:
+		_revive_btn.disabled = not can_revive
+		_revive_btn.modulate = Color.WHITE if can_revive else Color(0.5, 0.5, 0.5, 0.7)
 
 
 func _on_round_started(round_num: int) -> void:
@@ -280,13 +331,14 @@ func _create_character_tokens() -> void:
 	for i in _gm.characters.size():
 		var char_data: CharacterData = _gm.characters[i]
 		var token := CharacterToken.new()
-		token.setup(char_data, colors[i % colors.size()])
-
+		token.setup(char_data, colors[i % colors.size()], i)
+		
 		var start_pos := Vector2i(i % 3, i / 3)
 		char_data.grid_position = start_pos
 		_gm.board_state.set_character_position(char_data.id, start_pos)
 
 		token.move_to(start_pos, TILE_SIZE)
 		token.name = "Token_" + char_data.id
+		token.z_index = 1
 		add_child(token)
 		_character_tokens[char_data.id] = token

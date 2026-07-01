@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/board.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_slot.tscn" id="2"]
 [ext_resource type="Script" path="res://scripts/turn_bar.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/event_log.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/hand_manager.gd" id="5"]
 
 [node name="Main" type="Node"]
 
@@ -33,6 +36,89 @@ offset_bottom = 720.0
 layout_mode = 2
 size_flags_horizontal = 3
 text = ""
+
+[node name="EventLog" type="RichTextLabel" parent="UI/BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+script = ExtResource("4")
+text = "Welcome to Warping Woods!"
+
+[node name="LeftPanel" type="PanelContainer" parent="UI"]
+offset_left = 20.0
+offset_top = 182.0
+offset_right = 180.0
+offset_bottom = 518.0
+
+[node name="Content" type="VBoxContainer" parent="UI/LeftPanel"]
+layout_mode = 2
+
+[node name="DeckLabel" type="Label" parent="UI/LeftPanel/Content"]
+layout_mode = 2
+text = "DECK"
+horizontal_alignment = 1
+
+[node name="DeckSlot" parent="UI/LeftPanel/Content" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "deck"
+
+[node name="Spacer" type="Control" parent="UI/LeftPanel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DiscardLabel" type="Label" parent="UI/LeftPanel/Content"]
+layout_mode = 2
+text = "DISCARD"
+horizontal_alignment = 1
+
+[node name="DiscardSlot" parent="UI/LeftPanel/Content" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "discard"
+
+[node name="ActiveSlot" parent="UI" instance=ExtResource("2")]
+offset_left = 400.0
+offset_top = 250.0
+offset_right = 550.0
+offset_bottom = 460.0
+slot_id = "active"
+
+[node name="HandContainer" type="HBoxContainer" parent="UI"]
+offset_left = 160.0
+offset_top = 540.0
+offset_right = 1000.0
+offset_bottom = 620.0
+alignment = 1
+
+[node name="Slot0" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_0"
+
+[node name="Slot1" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_1"
+
+[node name="Slot2" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_2"
+
+[node name="Slot3" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_3"
+
+[node name="Slot4" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_4"
+
+[node name="Slot5" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_5"
+
+[node name="Slot6" parent="UI/HandContainer" instance=ExtResource("2")]
+layout_mode = 2
+slot_id = "hand_6"
+
+[node name="HandManager" type="Node" parent="UI"]
+script = ExtResource("5")
 
 [node name="RightPanel" type="PanelContainer" parent="UI"]
 anchor_left = 1.0
@@ -94,3 +180,9 @@ text = "Rest"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "End Turn"
+
+[node name="ReviveBtn" type="Button" parent="UI/RightPanel/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Revive"
+disabled = true

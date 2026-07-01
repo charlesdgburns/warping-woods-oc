@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bpmmismrg6yxi"]
+
+[ext_resource type="Script" path="res://scripts/pre_render_cards.gd" id="1_bvifm"]
+
+[node name="PreRender" type="Node"]
+script = ExtResource("1_bvifm")

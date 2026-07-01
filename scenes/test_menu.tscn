@@ -1,0 +1,48 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/test_menu.gd" id="1_menu"]
+
+[node name="TestMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -50.0
+offset_right = 100.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="MainGameBtn" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Main Game"
+
+[node name="CardTestBtn" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Card Mechanics Test"
+
+[node name="HandTestBtn" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Hand Manager Test"
+
+[connection signal="pressed" from="VBoxContainer/MainGameBtn" to="." method="_on_main_game_pressed"]
+[connection signal="pressed" from="VBoxContainer/CardTestBtn" to="." method="_on_card_test_pressed"]
+[node name="CardPilesBtn" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Card Piles Test"
+
+[connection signal="pressed" from="VBoxContainer/HandTestBtn" to="." method="_on_hand_test_pressed"]
+[connection signal="pressed" from="VBoxContainer/CardPilesBtn" to="." method="_on_card_piles_pressed"]

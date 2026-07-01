@@ -1,6 +1,183 @@
 class_name CardRender
 extends RefCounted
 
+static func save_card_png(card: CardData, parent: Node, file_path: String) -> bool:
+	var resolution := Vector2(152, 207)
+	var viewport := SubViewport.new()
+	viewport.size = resolution
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+	var card_face := Control.new()
+	card_face.size = resolution
+	viewport.add_child(card_face)
+
+	_build_card_face(card_face, card, resolution)
+
+	parent.add_child(viewport)
+	await parent.get_tree().process_frame
+	await parent.get_tree().process_frame
+
+	var viewport_tex := viewport.get_texture()
+	var image := viewport_tex.get_image()
+
+	parent.remove_child(viewport)
+	viewport.queue_free()
+
+	if not image:
+		push_error("CardRender: Failed to capture image for %s" % card.id)
+		return false
+
+	var dir := DirAccess.open("res://")
+	if dir:
+		dir.make_dir_recursive("resources/cards/textures")
+
+	var err := image.save_png(file_path)
+	if err != OK:
+		push_error("CardRender: Failed to save PNG %s error=%d" % [file_path, err])
+		return false
+	return true
+
+static func render_card_back(parent: Node, file_path: String, is_treasure: bool) -> bool:
+	var resolution := Vector2(152, 207)
+	var viewport := SubViewport.new()
+	viewport.size = resolution
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+	var card_back := Control.new()
+	card_back.size = resolution
+	viewport.add_child(card_back)
+
+	build_card_back(card_back, resolution, is_treasure)
+
+	parent.add_child(viewport)
+	await parent.get_tree().process_frame
+	await parent.get_tree().process_frame
+
+	var viewport_tex := viewport.get_texture()
+	var image := viewport_tex.get_image()
+
+	parent.remove_child(viewport)
+	viewport.queue_free()
+
+	if not image:
+		push_error("CardRender: Failed to capture card back image")
+		return false
+
+	var dir := DirAccess.open("res://")
+	if dir:
+		dir.make_dir_recursive("resources/cards/textures")
+
+	var err := image.save_png(file_path)
+	if err != OK:
+		push_error("CardRender: Failed to save PNG %s error=%d" % [file_path, err])
+		return false
+	return true
+
+static func build_card_back(parent: Control, resolution: Vector2, is_treasure: bool) -> void:
+	var card_w := resolution.x
+	var card_h := resolution.y
+	var sigil_color := Color(0.83, 0.66, 0.26)
+
+	var inner_color: Color
+	var corner_char: String
+	if is_treasure:
+		inner_color = Color(0.24, 0.10, 0.10)
+		corner_char = "\u25C6"
+	else:
+		inner_color = Color(0.10, 0.24, 0.10)
+		corner_char = "\u2726"
+
+	var border := ColorRect.new()
+	border.size = resolution
+	border.color = Color(0.24, 0.16, 0.09)
+	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(border)
+
+	var inner := ColorRect.new()
+	inner.position = Vector2(3, 3)
+	inner.size = resolution - Vector2(6, 6)
+	inner.color = inner_color
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(inner)
+
+	var margin := 8.0
+	var label_size := 12.0
+	var corners := [
+		Vector2(margin, margin),
+		Vector2(card_w - label_size - margin, margin),
+		Vector2(margin, card_h - label_size - margin),
+		Vector2(card_w - label_size - margin, card_h - label_size - margin)
+	]
+	for pos in corners:
+		var label := Label.new()
+		label.position = pos
+		label.size = Vector2(label_size, label_size)
+		label.text = corner_char
+		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_color_override("font_color", sigil_color)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(label)
+
+	if is_treasure:
+		_build_gem(parent, resolution, sigil_color)
+	else:
+		_build_spiral(parent, resolution, sigil_color)
+
+static func _build_spiral(parent: Control, resolution: Vector2, color: Color) -> void:
+	var w := int(resolution.x)
+	var h := int(resolution.y)
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	var cx: float = resolution.x / 2.0
+	var cy: float = resolution.y / 2.0
+	var max_r: float = min(cx, cy) * 0.7
+	var turns: float = 4.0
+	var steps: int = 3000
+
+	for i in range(steps):
+		var t: float = float(i) / steps * turns * TAU
+		var r: float = t / (turns * TAU) * max_r
+		var x: float = cx + r * cos(t)
+		var y: float = cy + r * sin(t)
+
+		for dx in range(-2, 3):
+			for dy in range(-2, 3):
+				var px := int(x) + dx
+				var py := int(y) + dy
+				if px >= 0 and px < w and py >= 0 and py < h:
+					if dx * dx + dy * dy <= 4:
+						img.set_pixel(px, py, color)
+
+	var tex := ImageTexture.create_from_image(img)
+	var tex_rect := TextureRect.new()
+	tex_rect.size = resolution
+	tex_rect.texture = tex
+	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(tex_rect)
+
+static func _build_gem(parent: Control, resolution: Vector2, color: Color) -> void:
+	var cx := resolution.x / 2.0
+	var cy := resolution.y / 2.0
+
+	var layers: Array[Dictionary] = [
+		{"size": Vector2(44, 60), "rot": 0.0, "alpha": 0.5},
+		{"size": Vector2(32, 44), "rot": PI / 4, "alpha": 0.75},
+		{"size": Vector2(18, 26), "rot": 0.0, "alpha": 1.0},
+	]
+
+	for l in layers:
+		var rect := ColorRect.new()
+		rect.size = l["size"]
+		rect.position = Vector2(cx - l["size"].x / 2.0, cy - l["size"].y / 2.0)
+		rect.color = Color(color.r, color.g, color.b, l["alpha"])
+		rect.pivot_offset = l["size"] / 2.0
+		rect.rotation = l["rot"]
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(rect)
+
 static func render_to_texture(parent: Node, card: CardData) -> Texture2D:
 	var resolution := Vector2(152, 207)
 	var viewport := SubViewport.new()

@@ -10,6 +10,9 @@ signal warp_completed
 signal move_mode_entered(valid_positions: Array[Vector2i])
 signal move_mode_exited
 signal character_moved(char_id: String, from_pos: Vector2i, to_pos: Vector2i)
+signal encounter_resolved(card: CardData)
+signal character_defeated(char_id: String)
+signal character_revived(char_id: String)
 
 var characters: Array[CharacterData]
 var current_character_index: int = 0
@@ -26,6 +29,11 @@ const BLOCK_COUNT := 4
 func _ready() -> void:
 	_load_characters()
 	board_state = BoardState.new()
+	
+	# Connect to ZoneManager
+	var zm = get_node_or_null("/root/ZoneManager")
+	if zm:
+		zm.encounter_triggered.connect(_on_encounter_triggered)
 
 
 func _load_characters() -> void:
@@ -87,12 +95,20 @@ func end_turn() -> void:
 
 
 func start_turn() -> void:
-	var char_data := get_current_character()
+	var char_data: CharacterData = get_current_character()
 	if char_data == null:
 		return
+	
+	if char_data.hp <= 0:
+		# Defeated characters skip their turn
+		get_node("/root/EventBus").log_event("%s is defeated and cannot act." % char_data.character_name)
+		end_turn()
+		return
+
 	char_data.has_moved = false
 	turn_phase = TurnPhase.IDLE
 	turn_started.emit(char_data.id)
+	get_node("/root/EventBus").log_event("Turn started: %s" % char_data.character_name)
 
 
 func enter_move_mode() -> void:
@@ -128,6 +144,7 @@ func handle_tile_click(pos: Vector2i) -> void:
 		board_state.set_character_position(char_data.id, pos)
 		turn_phase = TurnPhase.IDLE
 		character_moved.emit(char_data.id, old_pos, pos)
+		get_node("/root/EventBus").log_event("%s moved to %s" % [char_data.character_name, str(pos)])
 	else:
 		exit_move_mode()
 
@@ -154,8 +171,7 @@ func _get_valid_move_positions() -> Array[Vector2i]:
 			var dist: int = abs(gx - start.x) + abs(gy - start.y)
 			if dist > 0 and dist <= max_dist:
 				if _is_tile_walkable(Vector2i(gx, gy)):
-					if not _is_tile_occupied(Vector2i(gx, gy)):
-						result.append(Vector2i(gx, gy))
+					result.append(Vector2i(gx, gy))
 
 	return result
 
@@ -175,6 +191,7 @@ func _is_tile_occupied(pos: Vector2i) -> bool:
 
 
 func execute_warp() -> void:
+	get_node("/root/EventBus").log_event("THE WOODS ARE WARPING!")
 	warp_started.emit()
 
 	var shielded_blocks: Array[String] = []
@@ -230,3 +247,70 @@ func execute_warp() -> void:
 	board_state.block_rotations = new_rotations
 
 	warp_completed.emit()
+
+func handle_defeat(char_id: String) -> void:
+	var char_data: CharacterData = characters.filter(func(c): return c.id == char_id)[0]
+	if not char_data: return
+	
+	# Find summoning block position
+	var summoning_pos := Vector2i(0, 0)
+	for bx in BLOCK_COUNT:
+		for by in BLOCK_COUNT:
+			if board_state.block_grid[bx][by] == "summoning":
+				summoning_pos = Vector2i(bx * 3, by * 3)
+				break
+	
+	char_data.grid_position = summoning_pos
+	board_state.set_character_position(char_id, summoning_pos)
+	character_defeated.emit(char_id)
+	get_node("/root/EventBus").log_event("%s has been defeated and sent to the Summoning Block!" % char_data.character_name)
+
+func handle_revival(char_id: String) -> void:
+	var char_data: CharacterData = characters.filter(func(c): return c.id == char_id)[0]
+	if not char_data: return
+	
+	char_data.hp = char_data.max_hp / 2
+	character_revived.emit(char_id)
+	get_node("/root/EventBus").log_event("%s has been revived!" % char_data.character_name)
+
+func _on_encounter_triggered(card: CardData, char_id: String) -> void:
+	var char_data: CharacterData = characters.filter(func(c): return c.id == char_id)[0]
+	if not char_data: return
+	
+	# 1. Log the encounter
+	get_node("/root/EventBus").log_event("%s encountered: %s!" % [char_data.character_name, card.name])
+	
+	# 2. Handle the card type
+	if card.sub_type == CardData.SubType.HOSTILE:
+		# Hostile: Enter combat (Phase 4)
+		get_node("/root/EventBus").log_event("A hostile creature appears! Combat begins...")
+		turn_phase = TurnPhase.IDLE
+	else:
+		# Neutral/Quest: Resolve effects immediately
+		_resolve_card_effects(card, char_data)
+	
+	# 3. UI: Show in ActiveSlot via HandManager
+	var hm := get_node_or_null("/root/Main/UI/HandManager")
+	if hm and hm.has_method("show_drawn_card"):
+		hm.show_drawn_card(card)
+	
+	# All encounters end the turn immediately
+	end_turn()
+
+func _resolve_card_effects(card: CardData, char_data: CharacterData) -> void:
+	for effect in card.effects:
+		var type: String = effect.get("type", "")
+		match type:
+			"heal":
+				var val: int = effect.get("value", 0)
+				char_data.hp = min(char_data.max_hp, char_data.hp + val)
+				get_node("/root/EventBus").log_event("Healed for %d HP." % val)
+			"gain_gold":
+				var val: int = effect.get("value", 0)
+				char_data.gold += val
+				get_node("/root/EventBus").log_event("Gained %d gold." % val)
+			"grant_quest":
+				var q_id: String = effect.get("quest_id", "")
+				get_node("/root/EventBus").log_event("Started quest: %s" % q_id)
+			_:
+				get_node("/root/EventBus").log_event("Unknown effect: %s" % type)
