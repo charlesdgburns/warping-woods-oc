@@ -144,6 +144,8 @@ func get_card_rect() -> Rect2:
 func _on_card_button_up() -> void:
 	scale = Vector2.ONE
 	rotation = 0.0
+	if home_position != Vector2.ZERO:
+		snap_to_home()
 	card_released.emit(self)
 
 func handle_shadow(delta: float) -> void:

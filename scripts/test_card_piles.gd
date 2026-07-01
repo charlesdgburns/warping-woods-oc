@@ -4,7 +4,6 @@ var _deck_area: Control
 var _in_play_slot: CardSlot
 var _discard_slot: CardSlot
 var _hand_slots: Array[CardSlot] = []
-var _deck_count_label: Label
 var _draw_button: Button
 var _defeat_button: Button
 var _run_button: Button
@@ -22,7 +21,6 @@ func _ready() -> void:
 	_deck_area = $CanvasLayer/DeckArea
 	_in_play_slot = $CanvasLayer/InPlaySlot
 	_discard_slot = $CanvasLayer/DiscardSlot
-	_deck_count_label = $CanvasLayer/DeckArea/DeckCount
 	_draw_button = $CanvasLayer/DrawBtn
 	_defeat_button = $CanvasLayer/DefeatBtn
 	_run_button = $CanvasLayer/RunBtn
@@ -49,12 +47,13 @@ func _init_deck() -> void:
 	for i in range(deck_size):
 		var card := CardVisual.new()
 		add_child(card)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.modulate.a = 1.0
 		card.global_position = base_pos + Vector2(i * 2, i * 2)
+		card.set_home(card.global_position)
 		card.z_index = i
 		_deck_cards.append(card)
 	_update_status("Ready — Deck: %d cards" % _deck_cards.size())
-	_deck_count_label.text = "Deck: %d" % _deck_cards.size()
 
 
 func _on_draw_pressed() -> void:
@@ -73,7 +72,6 @@ func _on_draw_pressed() -> void:
 	_draw_button.disabled = true
 
 	var card := _deck_cards.pop_back() as CardVisual
-	_deck_count_label.text = "Deck: %d" % _deck_cards.size()
 	_shift_deck_visual()
 
 	_update_status("Drawing: %s" % card_data.name)
@@ -90,6 +88,7 @@ func _animate_card_to_in_play(card: CardVisual, data: CardData) -> void:
 
 func _on_card_arrived(card: CardVisual, data: CardData) -> void:
 	_active_card = card
+	card.set_home(card.global_position)
 	card.setup(data)
 	_update_status(data.name)
 	await get_tree().process_frame
@@ -138,6 +137,7 @@ func _collect_to_hand(data: CardData) -> void:
 	var tween := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(card, "global_position", target_slot.global_position, 0.5)
 	await tween.finished
+	card.set_home(card.global_position)
 
 	_update_status("Deck: %d cards" % _deck_cards.size())
 	_busy = false
@@ -154,6 +154,7 @@ func _discard_card(data: CardData) -> void:
 	var tween := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(card, "global_position", _discard_slot.global_position, 0.5)
 	await tween.finished
+	card.set_home(card.global_position)
 
 	_update_status("Deck: %d cards" % _deck_cards.size())
 	_busy = false

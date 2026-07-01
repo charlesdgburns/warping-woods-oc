@@ -16,134 +16,102 @@ offset_bottom = 690.0
 text = "Back to Menu"
 
 [node name="Status" type="Label" parent="CanvasLayer"]
-offset_left = 60.0
-offset_top = 40.0
+offset_left = 40.0
+offset_top = 20.0
 offset_right = 760.0
-offset_bottom = 70.0
+offset_bottom = 50.0
 theme_override_font_sizes/font_size = 18
 text = "Ready"
 
 [node name="DrawBtn" type="Button" parent="CanvasLayer"]
-offset_left = 60.0
-offset_top = 370.0
-offset_right = 230.0
-offset_bottom = 410.0
+offset_left = 40.0
+offset_top = 300.0
+offset_right = 210.0
+offset_bottom = 340.0
 text = "Draw Next"
 
 [node name="DefeatBtn" type="Button" parent="CanvasLayer"]
 offset_left = 540.0
-offset_top = 470.0
+offset_top = 360.0
 offset_right = 660.0
-offset_bottom = 510.0
+offset_bottom = 400.0
 text = "Defeat"
 
 [node name="RunBtn" type="Button" parent="CanvasLayer"]
 offset_left = 670.0
-offset_top = 470.0
+offset_top = 360.0
 offset_right = 810.0
-offset_bottom = 510.0
+offset_bottom = 400.0
 text = "Run Away"
 
 [node name="DeckArea" type="Control" parent="CanvasLayer"]
-offset_left = 60.0
-offset_top = 130.0
-offset_right = 212.0
-offset_bottom = 337.0
+offset_left = 40.0
+offset_top = 80.0
+offset_right = 192.0
+offset_bottom = 287.0
 mouse_filter = 2
-
-[node name="DeckLabel" type="Label" parent="CanvasLayer/DeckArea"]
-offset_left = 0.0
-offset_top = -30.0
-offset_right = 152.0
-offset_bottom = -5.0
-horizontal_alignment = 1
-text = "DECK"
-
-[node name="DeckCount" type="Label" parent="CanvasLayer/DeckArea"]
-offset_left = 0.0
-offset_top = 212.0
-offset_right = 152.0
-offset_bottom = 237.0
-horizontal_alignment = 1
-text = "Deck: 0"
 
 [node name="InPlaySlot" parent="CanvasLayer" instance=ExtResource("2")]
 slot_id = "in_play"
-offset_left = 564.0
-offset_top = 250.0
-offset_right = 714.0
-offset_bottom = 460.0
-
-[node name="InPlayLabel" type="Label" parent="CanvasLayer/InPlaySlot"]
-offset_left = 0.0
-offset_top = -30.0
-offset_right = 150.0
-offset_bottom = -5.0
-horizontal_alignment = 1
-text = "IN PLAY"
+offset_left = 540.0
+offset_top = 120.0
+offset_right = 690.0
+offset_bottom = 330.0
 
 [node name="DiscardSlot" parent="CanvasLayer" instance=ExtResource("2")]
 slot_id = "discard"
-offset_left = 1060.0
-offset_top = 130.0
-offset_right = 1210.0
-offset_bottom = 340.0
-
-[node name="DiscardLabel" type="Label" parent="CanvasLayer/DiscardSlot"]
-offset_left = 0.0
-offset_top = -30.0
-offset_right = 150.0
-offset_bottom = -5.0
-horizontal_alignment = 1
-text = "DISCARD"
+offset_left = 40.0
+offset_top = 380.0
+offset_right = 190.0
+offset_bottom = 590.0
 
 [node name="HandSlots" type="Node" parent="CanvasLayer"]
 
 [node name="Slot0" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_0"
-offset_left = 60.0
-offset_top = 490.0
-offset_right = 210.0
-offset_bottom = 700.0
+offset_left = 40.0
+offset_top = 500.0
+offset_right = 190.0
+offset_bottom = 710.0
 
 [node name="Slot1" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_1"
-offset_left = 230.0
-offset_top = 490.0
-offset_right = 380.0
-offset_bottom = 700.0
+offset_left = 215.0
+offset_top = 500.0
+offset_right = 365.0
+offset_bottom = 710.0
 
 [node name="Slot2" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_2"
-offset_left = 400.0
-offset_top = 490.0
-offset_right = 550.0
-offset_bottom = 700.0
+offset_left = 390.0
+offset_top = 500.0
+offset_right = 540.0
+offset_bottom = 710.0
 
 [node name="Slot3" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_3"
-offset_left = 570.0
-offset_top = 490.0
-offset_right = 720.0
-offset_bottom = 700.0
+offset_left = 565.0
+offset_top = 500.0
+offset_right = 715.0
+offset_bottom = 710.0
 
 [node name="Slot4" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_4"
 offset_left = 740.0
-offset_top = 490.0
+offset_top = 500.0
 offset_right = 890.0
-offset_bottom = 700.0
+offset_bottom = 710.0
 
 [node name="Slot5" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_5"
-offset_left = 910.0
-offset_top = 490.0
-offset_right = 1060.0
-offset_bottom = 700.0
+offset_left = 915.0
+offset_top = 500.0
+offset_right = 1065.0
+offset_bottom = 710.0
 
 [node name="Slot6" parent="CanvasLayer/HandSlots" instance=ExtResource("2")]
 slot_id = "hand_6"
-offset_left = 1080.0
-offset_top = 490.0
-offset_right = 1230.0
-offset_bottom = 700.0
+offset_left = 1090.0
+offset_top = 500.0
+offset_right = 1240.0
+offset_bottom = 710.0
