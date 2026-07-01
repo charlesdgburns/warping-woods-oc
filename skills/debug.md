@@ -1,94 +1,139 @@
-# Debugging & Testing Skill
+# Debugging & Testing
 
-> Structured debugging loop for feature development. Uses GUT (Godot Unit Test) for testing.
-
----
-
-## Debugging Loop
-
-The core workflow when fixing bugs or developing features:
-
-```
-0. CAPTURE → Run .\tools\capture_errors.ps1 to snapshot Godot parse errors
-1. RUN     → Execute the game or relevant tests
-2. CATCH   → Error occurs → log to /debug/<feature>_<date>.log
-3. ANALYSE → Read the error, identify root cause
-4. TEST    → Write a GUT test that reproduces the bug (in /tests/)
-5. FIX     → Modify the source code
-6. VERIFY  → Run .\tools\capture_errors.ps1 again, then tests until green
-7. REPEAT  → If new error surfaces, go to step 2
-8. COMMIT  → All tests pass, commit the fix + test
-```
-
-### Key Rules
-
-- **Bug fix:** Write the reproducing test first, then fix the code
-- **New feature:** Write tests alongside implementation
-- **Refactor:** Run existing tests before and after to ensure nothing broke
-- **No tests, no commit:** A feature is not done until it has tests
+> Proven 3-layer debugging workflow. The `--quit` parse check alone misses most errors.
 
 ---
 
-## Directory Structure
+## Three-Layer Error Discovery
+
+Godot's `--quit` / `--check-only` only validates autoload scripts and the main scene.
+Scripts loaded by scenes or using `class_name` are compiled **lazily** on first use.
+Errors only surface when the script is actually loaded or executed.
+
+### Layer 1: Parse Check
+
+```
+godot --headless --path . --quit
+```
+
+Catches parse errors in autoloads and the main scene only.
+
+**Blind to:** Scene-referenced scripts, `class_name` scripts, and any script not in the
+autoload → main scene dependency chain.
+
+### Layer 2: Scene-Load Check
+
+```
+godot --headless --path . res://scenes/<target>.tscn --quit
+```
+
+Forces instantiation and compilation of the scene's root script plus its entire
+dependency chain. This catches parse errors that `--quit` silently skips.
+
+**Example output from a real bug:**
+
+```
+SCRIPT ERROR: Parse Error: Cannot infer the type of "deck_size"
+  at: res://scripts/test_card_piles.gd:47
+SCRIPT ERROR: Parse Error: Cannot infer the type of "card_data"
+  at: res://scripts/test_card_piles.gd:67
+ERROR: Failed to load script "res://scripts/test_card_piles.gd"
+WARNING: Parent path ... has vanished when instantiating
+```
+
+A single parse error in the root script cascades: script fails to load → scene
+structure breaks → all child nodes lose their parent path references.
+
+### Layer 3: GUT Test Run (when available)
+
+```
+godot --headless --path . --res://addons/gut/gut_cmdln.gd -gselect=<test> -gexit
+```
+
+Catches compile errors in all scripts the test suite references, plus runtime
+assertion failures. Also forces lazy compilation of `class_name` scripts that
+neither autoloads nor scenes reference.
+
+### Common Silent Errors
+
+| Error pattern | Root cause |
+|---|---|
+| `Cannot infer the type of "x"` | `var x := expr()` where `expr` returns Variant from an untyped base (e.g. typed as `Node` instead of the actual class) |
+| `vanished when instantiating` | Root script failed to load → child node paths unresolved |
+| GUT hangs silently | Test file has a compile error, e.g. uses a type name without `class_name` declaration |
+
+---
+
+## Write → Debug → Fix Loop
+
+```
+1. Write code
+2. Run Layer 1 + Layer 2 (and Layer 3 if GUT works)
+3. If errors found → fix them → go to step 2
+4. When clean → commit
+```
+
+### Checklist
+- [ ] `--quit` passes
+- [ ] `res://scene.tscn --quit` passes for all changed scenes
+- [ ] All scripts used as types have `class_name` declared
+- [ ] No `var x := untyped_expr` in scene root scripts
+
+---
+
+## Common Bug Patterns Found in This Project
+
+### Type inference fails on `Node`-typed variables
+
+```gdscript
+# ❌ BROKEN: typed as Node, so .size() returns Variant, := fails
+var _card_database: Node
+var deck_size := _card_database.encounter_deck.size()
+```
+
+```gdscript
+# ✅ FIXED: explicit type hint
+var _card_database: Node
+var deck_size: int = _card_database.encounter_deck.size()
+```
+
+### Script used as type without `class_name`
+
+```gdscript
+# ❌ BROKEN: CardDatabase has no class_name declaration
+var db: CardDatabase
+var card = db.encounter_deck.pop_front() as CardDatabase
+```
+
+Fix: either add `class_name CardDatabase` to the source script, or type as `Node`
+and use explicit type hints.
+
+### Wrong CLI syntax for scene loading
+
+```powershell
+# ❌ --"res://..." loads the main scene, not the target scene
+godot --"res://scenes/target.tscn" --quit
+
+# ✅ Correct: no -- before the path
+godot res://scenes/target.tscn --quit
+```
+
+---
+
+## Testing Reference
+
+### Directory Structure
 
 ```
 /tests/
-├── .gutconfig.json              # GUT configuration (res://tests/.gutconfig.json)
-├── unit/                        # Unit tests — isolated function/method tests
-│   └── test_<module>.gd         # e.g. test_card_data.gd, test_zone_manager.gd
-└── integration/                 # Integration tests — cross-system interactions
-    └── test_<feature>.gd        # e.g. test_equip_flow.gd, test_combat.gd
-
-/debug/
-└── <feature>_<date>.log         # e.g. equip_bug_2026-06-29.log
+├── .gutconfig.json              # GUT configuration
+├── unit/                        # Isolated function/method tests
+│   └── test_<module>.gd
+└── integration/                 # Cross-system interaction tests
+    └── test_<feature>.gd
 ```
 
-Each test file extends `GutTest` and is prefixed with `test_`.
-
----
-
-## Error Capture Script
-
-**Script:** `tools/capture_errors.ps1`
-
-Automatically runs Godot in headless mode and captures parse/script errors before manual play-testing.
-
-### Usage
-
-```powershell
-# From project root (defaults auto-detect Godot binary + project dir)
-.\tools\capture_errors.ps1
-
-# Explicit paths
-.\tools\capture_errors.ps1 -GodotBin "C:\Users\owner\Coding\godot\Godot_v4.7-stable_win64_console.exe" -ProjectDir "C:\Users\owner\Coding\warping-woods-oc"
-```
-
-### Behavior
-
-1. Locates Godot binary (checks known paths, then `PATH`)
-2. Finds project root (looks for `project.godot`)
-3. Runs `godot --path <project> --headless --quit`, capturing all output
-4. Writes full output to `debug/parse_errors_<yyyy-MM-dd_HH-mm-ss>.log`
-5. Scans output for error keywords (`Parser Error`, `Parse Error`, `ERROR`, `SCRIPT ERROR`)
-6. Exits with code `0` if clean, `1` if errors found
-
-### When to use
-
-- **First diagnostic step** when Godot refuses to open the project
-- **After any script edit** to catch parse errors before the editor loads
-- **Before committing** to ensure no syntax/type errors slipped in
-
----
-
-## GUT Setup
-
-### Installation
-
-1. Open Godot → AssetLib → search "GUT" → Download
-2. The `addons/gut/` folder is placed in your project
-3. Enable: Project → Project Settings → Plugins → GUT → Enable
-
-### Configuration (`/tests/.gutconfig.json`)
+### GUT Configuration (`/tests/.gutconfig.json`)
 
 ```json
 {
@@ -103,54 +148,30 @@ Automatically runs Godot in headless mode and captures parse/script errors befor
 }
 ```
 
-### Running Tests
+### GUT Commands
 
-**From Godot editor:**
-- Open GUT dock: Project → Tools → GUT
-- Click "Run All" or select individual test scripts
+| Command | Runs |
+|---|---|
+| `godot --path . --res://addons/gut/gut_cmdln.gd -gexit` | All tests |
+| `godot --path . --res://addons/gut/gut_cmdln.gd -gselect=<test_name> -gexit` | Single test by name |
+| `godot --path . --res://addons/gut/gut_cmdln.gd -gtest=res://tests/unit/test_<file>.gd -gexit` | Single file |
 
-**From command line:**
-```bash
-godot -s addons/gut/gut_cmdln.gd -d --path "$PWD" -gconfig=res://tests/.gutconfig.json -gexit
-```
-
-**Run a single test file:**
-```bash
-godot -s addons/gut/gut_cmdln.gd -d --path "$PWD" -gconfig=res://tests/.gutconfig.json -gtest=res://tests/unit/test_<name>.gd -gexit
-```
-
-**Run a single test by name:**
-```bash
-godot -s addons/gut/gut_cmdln.gd -d --path "$PWD" -gconfig=res://tests/.gutconfig.json -gunit_test_name="test_<name>" -gexit
-```
-
----
-
-## Test File Template
+### Test File Template
 
 ```gdscript
-#! test/unit/test_<module>.gd
 extends GutTest
 
-# ---------------------------------------------------------------------------
-# Setup
-# ---------------------------------------------------------------------------
-
 func before_each():
-	# Create fresh instances for each test
-	pass
+    # Create fresh instances
+    pass
 
 func after_each():
-	# Cleanup
-	pass
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
+    # Cleanup
+    pass
 
 func test_<what_it_tests>():
-	var result = <call_function_under_test>
-	assert_eq(result, <expected_value>, "<descriptive message>")
+    var result = <call_function_under_test>
+    assert_eq(result, <expected_value>, "<descriptive message>")
 ```
 
 ### Common Assertions
@@ -166,82 +187,6 @@ func test_<what_it_tests>():
 | `assert_has(obj, element, msg)` | Array/element contains |
 | `assert_does_not_have(obj, element, msg)` | Array/element does not contain |
 | `assert_signal_emitted(obj, signal_name, msg)` | Signal was emitted |
-| `assert_signal_not_emitted(obj, signal_name, msg)` | Signal was not emitted |
 | `pending(msg)` | Mark test as pending |
 | `pass_test(msg)` | Force pass |
 | `fail_test(msg)` | Force fail |
-
-Full reference: `res://addons/gut/` or https://gut.readthedocs.io/
-
----
-
-## Error Log Format
-
-Write errors to `/debug/<feature>_<date>.log` in this format:
-
-```
-=== <Feature Name> Error ===
-Date: 2026-06-29 12:00:00
-
-Error:
-<raw error message from Godot>
-
-Stack Trace:
-<stack trace>
-
-Source File:
-<file path>:<line>
-
-Reproduction Steps:
-1. <step one>
-2. <step two>
-
-Expected:
-<what should happen>
-
-Actual:
-<what actually happens>
-
-Test:
-<test file that reproduces this>
-```
-
-### Writing from GDScript (for capturing runtime errors)
-
-```gdscript
-func log_error(feature: String, error_text: String, stack: String):
-	var time = Time.get_datetime_dict_from_system()
-	var filename = "%s_%04d-%02d-%02d.log" % [feature, time.year, time.month, time.day]
-	var path = "user://debug/%s" % filename
-	var file = FileAccess.open(path, FileAccess.WRITE)
-	file.store_string(error_text + "\n---\n" + stack)
-```
-
----
-
-## Test Categories
-
-### Unit Tests (`/tests/unit/`)
-Test a single function or method in isolation. No dependencies on other systems.
-
-```gdscript
-# test_card_data.gd
-func test_card_data_from_json():
-	var json = {"id": "test_card", "name": "Test", "type": "treasure"}
-	var card = CardData.from_json(json)
-	assert_eq(card.card_id, "test_card", "ID should match")
-```
-
-### Integration Tests (`/tests/integration/`)
-Test interactions between two or more systems.
-
-```gdscript
-# test_equip_flow.gd
-func test_equip_weapon_moves_card_to_hand():
-	var card = load_card("iron_sword")
-	var char = create_test_character()
-	char.hand.append(card)
-	ZoneManager.equip_card(card.card_id, char.id)
-	assert_eq(char.hand.size(), 0, "Card should leave hand")
-	assert_not_null(char.equipment.hands[0], "Card should be in hand slot")
-```

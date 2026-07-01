@@ -7,6 +7,7 @@ var home_position: Vector2 = Vector2.ZERO
 var _render_pending := false
 var _animation_pending := false
 var _render_viewport: SubViewport
+var _visuals_ready := false
 
 signal card_released(card: CardVisual)
 
@@ -16,16 +17,17 @@ func _init() -> void:
 	pivot_offset = Vector2(76, 103.5)
 	velocity_multiplier = 1.0
 
+func _enter_tree() -> void:
+	if not _visuals_ready:
+		_setup_visuals()
+		_visuals_ready = true
+
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_ENTER_TREE, NOTIFICATION_RESIZED, NOTIFICATION_THEME_CHANGED]:
 		size = Vector2(152, 207)
 		custom_minimum_size = Vector2(152, 207)
 
 func _ready() -> void:
-	_setup_visuals()
-	card_texture = $CardTexture
-	shadow = $Shadow
-	collision_shape = $DestroyArea/CollisionShape2D
 	super._ready()
 
 	modulate.a = 0.0
