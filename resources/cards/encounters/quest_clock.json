@@ -1,0 +1,11 @@
+{
+  "id": "quest_clock",
+  "name": "The Lost Chronometer",
+  "type": "encounter",
+  "sub_type": "quest",
+  "effects": [
+    {"type": "grant_quest", "quest_id": "fix_time", "reward_gold": 50}
+  ],
+  "condition": "Find the Golden Gear in a Treasure Chest",
+  "description": "You find a broken clock. If you can find the gear, you might unlock a secret of the woods."
+}

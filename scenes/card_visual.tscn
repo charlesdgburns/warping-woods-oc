@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/card_visual.gd" id="1"]
+
+[node name="CardVisual" type="Button" script=ExtResource("1")]
+offset_right = 152.0
+offset_bottom = 207.0

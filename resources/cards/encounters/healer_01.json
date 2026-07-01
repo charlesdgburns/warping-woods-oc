@@ -1,0 +1,11 @@
+{
+  "id": "healer_01",
+  "name": "Forest Healer",
+  "type": "encounter",
+  "sub_type": "neutral",
+  "effects": [
+    {"type": "heal", "value": 5},
+    {"type": "gain_gold", "value": 2}
+  ],
+  "description": "A gentle spirit offers a soothing touch to your wounds."
+}

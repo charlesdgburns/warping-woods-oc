@@ -1,3 +1,6 @@
 [submodule "godot-docs"]
 	path = godot-docs
 	url = https://github.com/godotengine/godot-docs.git
+[submodule "godot_ui_components"]
+	path = godot_ui_components
+	url = https://github.com/MrEliptik/godot_ui_components
